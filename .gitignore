@@ -1,0 +1,22 @@
+# data
+data/*
+!data/.gitkeep
+
+# python
+__pycache__/
+*.pyc
+*.pyo
+
+# notebooks
+.ipynb_checkpoints/
+*.ipynb~*
+
+# environments
+.env
+.venv
+*.egg-info/
+
+# OS
+.DS_Store
+Thumbs.db
+EOF
