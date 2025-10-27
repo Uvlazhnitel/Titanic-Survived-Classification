@@ -5,7 +5,7 @@ This project aims to build a machine learning model to predict the survival of p
 
 **Task:** Binary classification of passenger survival (Survived).
 
-**Business Use:** The model is intended for ranking/prioritization purposes. The focus is on achieving high recall while maintaining acceptable precision (or vice versa — choose and fix the priority).
+**Business Use:** The model is intended for ranking/prioritization purposes. The focus is on achieving high recall while maintaining acceptable precision, with recall being the primary metric for optimization.
 
 **Metrics:** PR-AUC (for handling class imbalance) and ROC-AUC. Later, confusion matrix, precision, recall, and F1-score will also be evaluated.
 
