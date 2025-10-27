@@ -3,6 +3,14 @@
 ## Project Overview
 This project aims to build a machine learning model to predict the survival of passengers aboard the Titanic based on various features.
 
+**Task:** Binary classification of passenger survival (Survived).
+
+**Business Use:** The model is intended for ranking/prioritization purposes. The focus is on achieving high recall while maintaining acceptable precision (or vice versa — choose and fix the priority).
+
+**Metrics:** PR-AUC (for handling class imbalance) and ROC-AUC. Later, confusion matrix, precision, recall, and F1-score will also be evaluated.
+
+**Validation Protocol:** We will use StratifiedKFold(5) on the full training dataset (`train_full`). All preprocessing steps will be encapsulated within a `Pipeline` or `ColumnTransformer`. The test set will only be used once at the end.
+
 ## Dataset
 The dataset used for this project is the Titanic dataset, which contains information about passengers such as age, gender, class, and survival status.
 
@@ -34,3 +42,4 @@ The dataset used for this project is the Titanic dataset, which contains informa
 
 ## Results
 Details about the model's performance and evaluation metrics will be added here.
+
