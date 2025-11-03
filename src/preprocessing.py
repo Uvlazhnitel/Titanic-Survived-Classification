@@ -1,17 +1,32 @@
 # src/preprocessing.py
+from sklearn import set_config
+set_config(transform_output="pandas")
+
+from sklearn.preprocessing import FunctionTransformer, StandardScaler, OneHotEncoder
 from sklearn.pipeline import Pipeline
 from sklearn.impute import SimpleImputer
-from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer
 
-# Pipeline for numerical features
+# Function to add new ratio features
+def add_ratio(df):
+    out = df.copy()
+    out["FamilySize"] = out["SibSp"].fillna(0) + out["Parch"].fillna(0) + 1
+    out["FarePerPerson"] = out["Fare"] / out["FamilySize"]
+    return out
+
+# Numerical pipeline
 def make_num_pipeline():
     return Pipeline(steps=[
-        ("imputer", SimpleImputer(strategy="median")),
+        ("imputer", SimpleImputer(strategy="median")), 
+        ("ratio", FunctionTransformer(
+            add_ratio,
+            validate=False,
+            feature_names_out=lambda transformer, input_features: list(input_features) + ["FamilySize", "FarePerPerson"]
+        )),
         ("scaler", StandardScaler())
     ])
 
-# Pipeline for categorical features
+# Categorical pipeline
 def make_cat_pipeline():
     return Pipeline(steps=[
         ("imputer", SimpleImputer(strategy="most_frequent")),
