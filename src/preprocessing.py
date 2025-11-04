@@ -8,6 +8,11 @@ from sklearn.pipeline import Pipeline
 from sklearn.impute import SimpleImputer
 from sklearn.compose import ColumnTransformer
 
+def log_fare_only(df):
+    out = df.copy()
+    out["Fare"] = np.log1p(out["Fare"].clip(lower=0))
+    return out
+
 # Function to add new ratio features
 def add_ratio(df):
     out = df.copy()
@@ -18,15 +23,20 @@ def add_ratio(df):
 # Numerical pipeline
 def make_num_pipeline():
     return Pipeline(steps=[
-        ("imputer", SimpleImputer(strategy="median")), 
-        ("log1p", FunctionTransformer(np.log1p, feature_names_out="one-to-one")),
+        ("imputer", SimpleImputer(strategy="median")),
         ("ratio", FunctionTransformer(
             add_ratio,
             validate=False,
-            feature_names_out=lambda transformer, input_features: list(input_features) + ["FamilySize", "FarePerPerson"]
+            feature_names_out=lambda tr, feats: list(feats) + ["FamilySize", "FarePerPerson"]
         )),
-        ("scaler", StandardScaler())
+        ("log_fare", FunctionTransformer(
+            log_fare_only,
+            validate=False,
+            feature_names_out=lambda tr, feats: list(feats)
+        )),
+        ("scaler", StandardScaler()),
     ])
+
 
 # Categorical pipeline
 def make_cat_pipeline():
