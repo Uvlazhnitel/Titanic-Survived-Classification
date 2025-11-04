@@ -32,6 +32,8 @@ def add_ratio(df):
     Expects columns: 'SibSp', 'Parch', 'Fare'.
     """
     out = df.copy()
+    # FamilySize is always >= 1 due to the +1 (representing the passenger themselves),
+    # so division by zero is not possible when calculating FarePerPerson
     out["FamilySize"] = out["SibSp"].fillna(0) + out["Parch"].fillna(0) + 1
     out["FarePerPerson"] = out["Fare"].fillna(0) / out["FamilySize"]
     return out
