@@ -1,4 +1,5 @@
 # src/preprocessing.py
+import numpy as np
 from sklearn import set_config
 set_config(transform_output="pandas")
 
@@ -18,6 +19,7 @@ def add_ratio(df):
 def make_num_pipeline():
     return Pipeline(steps=[
         ("imputer", SimpleImputer(strategy="median")), 
+        ("log1p", FunctionTransformer(np.log1p, feature_names_out="one-to-one")),
         ("ratio", FunctionTransformer(
             add_ratio,
             validate=False,
