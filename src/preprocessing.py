@@ -13,6 +13,14 @@ from sklearn.preprocessing import FunctionTransformer, StandardScaler, OneHotEnc
 
 
 # ---------------------------
+# Constants
+# ---------------------------
+
+# Feature names added by add_ratio function
+RATIO_FEATURES = ["FamilySize", "FarePerPerson"]
+
+
+# ---------------------------
 # Helper feature functions
 # ---------------------------
 
@@ -91,7 +99,7 @@ def make_num_pipeline_plain():
         ("ratio", FunctionTransformer(
             add_ratio,
             validate=False,
-            feature_names_out=lambda tr, feats: list(feats) + ["FamilySize", "FarePerPerson"]
+            feature_names_out=lambda tr, feats: list(feats) + RATIO_FEATURES
         )),
         ("log_fare", FunctionTransformer(
             log_fare_only,
@@ -113,7 +121,7 @@ def make_cluster_pipeline(n_clusters=5, gamma=0.1, random_state=42):
         ("ratio", FunctionTransformer(
             add_ratio,
             validate=False,
-            feature_names_out=lambda tr, feats: list(feats) + ["FamilySize", "FarePerPerson"]
+            feature_names_out=lambda tr, feats: list(feats) + RATIO_FEATURES
         )),
         ("log_fare", FunctionTransformer(
             log_fare_only,
