@@ -1,4 +1,3 @@
-P1 — Titanic (Survival Classification)
 # Titanic Classification Project
 
 ## Goal
