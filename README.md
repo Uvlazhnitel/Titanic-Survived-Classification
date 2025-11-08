@@ -1,32 +1,80 @@
-# Titanic Classification Project
+# Titanic Survived Classification
 
-## Goal
+A clean, reproducible baseline for the Kaggle Titanic binary classification task using scikit-learn Pipelines to avoid data leakage.
 
-Build a reproducible end-to-end pipeline for Titanic survival prediction:
-- Proper data split → `Pipeline`/`ColumnTransformer` → Cross-validation (CV) evaluation → Threshold selection → Final evaluation on the test set.
+## Environment & Installation
+
+Choose ONE of the two approaches:
+
+1. Lightweight (pip):
+```bash
+python -m venv .venv
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+2. Reproducible (Conda + requirements):
+```bash
+conda env create -f environment.yml
+conda activate titanic
+```
+
+To reproduce an exact setup:
+```bash
+pip install -r pinned-requirements.txt
+```
+
+Install pre-commit hooks (recommended):
+```bash
+pip install pre-commit
+pre-commit install
+```
 
 ## Data
 
-- **Dataset**: `data/raw.csv` (Titanic dataset).
-- **Target**: `Survived` (binary: 0/1).
-- **Features**:
-  - **Numeric**: `Age`, `Fare`, etc.
-  - **Categorical**: `Sex`, `Pclass`, `Embarked`, etc.
+Download the Kaggle Titanic dataset and place the files in `data/`:
+- `data/train.csv`
+- `data/test.csv` (optional)
 
-## Metrics & Targets (Validated via CV)
+See [data/README.md](data/README.md) for details.
 
-- **PR-AUC**: ≥ 0.60
-- **ROC-AUC**: ≥ 0.88
-- At the chosen operating threshold:
-  - **Precision**: ≥ 0.85
-  - **Recall**: ≥ 0.50
-  - **F1**: ≥ 0.70
-- **Accuracy**: Informational only.
+## Project Structure
 
-**Note**: Pick the threshold on validation predictions, then fix it and reuse it on the test set.
+```
+.
+├── data/                # Raw & sample data (large files not committed)
+├── notebooks/           # Exploratory & experiment notebooks
+├── src/                 # Reusable Python modules
+│   ├── features/        # Feature engineering scripts
+│   ├── models/          # Training, evaluation, prediction
+│   └── utils/           # Shared helpers (paths, etc.)
+├── reports/             # Generated metrics & figures
+├── models/              # Saved model artifacts (ignored except docs)
+├── requirements.txt     # Top-level dependencies
+├── pinned-requirements.txt # Fully pinned environment
+├── environment.yml      # Conda environment (optional)
+└── .pre-commit-config.yaml
+```
 
-## Quality Rules
+## Run Baseline
 
-1. Create the test set once and do not touch it until the end.
-2. All preprocessing must reside inside the `Pipeline`/`ColumnTransformer` after the split (to avoid data leakage).
-3. Use `StratifiedKFold(n_splits=5, random_state=...)` for cross-validation.
+Train model with cross-validation and save the pipeline:
+```bash
+python -m src.models.train
+```
+
+Evaluate on the training set to produce metrics and plots:
+```bash
+python -m src.models.evaluate
+```
+
+Artifacts:
+- `models/logreg_pipeline.joblib` — trained pipeline
+- `reports/metrics.json` — metrics (accuracy, precision, recall, F1, ROC AUC)
+- `reports/figures/` — confusion matrix, ROC, PR curves
+
+## Next Steps
+- Add more feature engineering (Title, FamilySize, IsAlone, CabinDeck, Ticket groups)
+- Try alternative models (RandomForest, XGBoost, LightGBM)
+- Add permutation importance or SHAP for explainability
+- Add CI to run linting and tests

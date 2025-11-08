@@ -68,6 +68,8 @@ data/**
 !data/*.csv
 !data/*.tsv
 !data/*.json
+# Exclude train.csv symlink
+data/train.csv
 
 # ---------- Models / artifacts ----------
 models/**
@@ -79,6 +81,7 @@ reports/figures/**
 !reports/figures/.gitkeep
 reports/*.html
 reports/*.pdf
+reports/*.json
 !reports/metrics.md
 !reports/metrics.csv
 !reports/README.md
