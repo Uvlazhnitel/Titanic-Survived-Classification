@@ -43,7 +43,7 @@
 * **Goal:** choose a single operating point to convert probabilities → labels.
 * **Strategy:** (pick one)
   * **Precision ≥ T, maximize Recall** on OOF predictions (business: false positives are costly).
-* **Target :** `T = 0.85`
+* **Target:** `T = 0.85`
 * The chosen threshold will be saved to `reports/threshold.npy` and documented in the table above.
 
 ---
