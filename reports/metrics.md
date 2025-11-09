@@ -56,7 +56,6 @@ Metrics
 - PR Curve: `reports/figures/pr_baseline.png`
 - Confusion Matrix: `reports/figures/confusion_matrix.png`
 - Threshold: `reports/threshold.npy`
-- (Optional) OOF Predictions: `reports/oof_predictions.csv` (id, y_true, oof_proba, oof_pred_thr)
 
 ---
 
