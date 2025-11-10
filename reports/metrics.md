@@ -43,8 +43,8 @@ Model Evaluation Metrics
 - **Precision**: 0.849, **Recall**: 0.619, **F1**: 0.716
 
 **Delta (Balanced − Baseline) @ Thr=0.635**:  
-- FP −1, FN +1, TP −1, TN +1  
-- Precision +0.003, Recall −0.004, F1 −0.001  
+- FP -1, FN +1, TP -1, TN +1  
+- Precision +0.003, Recall -0.004, F1 -0.001  
 
 ---
 
