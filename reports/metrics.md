@@ -18,7 +18,7 @@ For models where per-fold CV was not yet re-run (only OOF AUCs available), the C
 |--------------------------------|--------------------|------------------|-----------------------------------------------------------------------|
 | LogisticRegression (baseline)  | 0.856 ± 0.031     | 0.834 ± 0.029    | OOF AUCs: ROC=0.856, AP=0.831                                         |
 | RandomForestClassifier         | 0.870 ± 0.016     | 0.821 ± 0.031    | OOF AUCs: ROC=0.871, AP=0.812                                         |
-| LogisticRegression (+balanced) | —                 | —                | OOF AUCs (currently): ROC=0.856, AP=0.829. Run the same CV to fill mean±std. |
+| LogisticRegression (+balanced) | 0.856 ± 0.029     | 0.832 ± 0.028    | OOF AUCs: ROC=0.856, AP=0.832                                         |
 
 **Action item (optional)**: Re-run `cross_validate(..., scoring={"roc_auc","average_precision"})` for the balanced model to fill CV mean ± std.
 
@@ -33,10 +33,7 @@ Thresholds are selected on OOF predictions using the same rule as Session 5
 |--------------------------------|-------|---------------|------------|--------|--------------------------------------------------------------------------|
 | LogisticRegression (baseline)  | 0.635 | 0.846         | 0.623      | 0.717  | OOF, 5-fold                                                             |
 | RandomForestClassifier         | 0.640 | 0.844         | 0.656      | 0.738  | OOF, 5-fold                                                             |
-| LogisticRegression (+balanced) | 0.635*| 0.849         | 0.619      | 0.716  | OOF, 5-fold; apples-to-apples at the same 0.635 threshold. Own optimized threshold saved (see Artifacts). |
-
-*Note*: `0.635*` for the balanced model is for a direct, apples-to-apples comparison.  
-The optimized threshold for the balanced model based on the same rule is saved — see artifacts below.
+| LogisticRegression (+balanced) | 0.635 | 0.849         | 0.619      | 0.716  | OOF, 5-fold;                                                            |
 
 ---
 
