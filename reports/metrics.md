@@ -72,8 +72,8 @@ Thresholds are selected on OOF predictions using the same rule as Session 5
 ## F) Artifacts
 
 - **Baseline threshold**: `reports/threshold.npy`  
-- **RF threshold**: `reports/thresholds_rf.npy`  
-- **Balanced-logistic threshold**: `reports/thresholds_bl.npy`  
+- **RF threshold**: `reports/threshold_rf.npy`  
+- **Balanced-logistic threshold**: `reports/threshold_bl.npy`  
 - **ROC / PR figures**: under `reports/figures/` (per model)
 
 ---
