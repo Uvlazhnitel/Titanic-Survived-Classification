@@ -31,33 +31,33 @@ Thresholds are selected on OOF predictions using the same rule as Session 5
 
 | Model                          | Thr.  | Precision@Thr | Recall@Thr | F1@Thr | Protocol                                                                 |
 |--------------------------------|-------|---------------|------------|--------|--------------------------------------------------------------------------|
-| LogisticRegression (baseline)  | 0.635 | 0.846         | 0.623      | 0.717  | OOF, 5-fold                                                             |
-| RandomForestClassifier         | 0.640 | 0.844         | 0.656      | 0.738  | OOF, 5-fold                                                             |
-| LogisticRegression (+balanced) | 0.635 | 0.849         | 0.619      | 0.716  | OOF, 5-fold;                                                            |
+| LogisticRegression (baseline)  | 0.636 | 0.850         | 0.623      | 0.719  | OOF, 5-fold; Strategy: precision ≥ 0.85 → maximize recall; Chosen index: 486 |
+| RandomForestClassifier         | 0.640 | 0.852         | 0.652      | 0.739  | OOF, 5-fold                                                             |
+| LogisticRegression (+balanced) | 0.743 | 0.854         | 0.619      | 0.718  | OOF, 5-fold; Strategy: precision ≥ 0.85 → maximize recall; Chosen index: 488 |
 
 ---
 
 ## C) Confusion Matrices (OOF) @ Listed Thresholds
 
 ### RandomForest @ 0.640
-- **TN**=406, **FP**=33, **FN**=94, **TP**=179  
-- **Precision**=0.844, **Recall**=0.656, **F1**=0.738  
+- **TN**=408, **FP**=31, **FN**=95, **TP**=178  
+- **Precision**=0.852, **Recall**=0.652, **F1**=0.739  
 
-### LogisticRegression (baseline) @ 0.635
-- **TN**=408, **FP**=31, **FN**=103, **TP**=170  
-- **Precision**=0.846, **Recall**=0.623, **F1**=0.717  
+### LogisticRegression (baseline) @ 0.636
+- **TN**=409, **FP**=30, **FN**=103, **TP**=170  
+- **Precision**=0.850, **Recall**=0.623, **F1**=0.719  
 
-### LogisticRegression (+balanced) @ 0.635*
-- **TN**=409, **FP**=30, **FN**=104, **TP**=169  
-- **Precision**=0.849, **Recall**=0.619, **F1**=0.716  
+### LogisticRegression (+balanced) @ 0.743
+- **TN**=410, **FP**=29, **FN**=104, **TP**=169  
+- **Precision**=0.854, **Recall**=0.619, **F1**=0.718  
 
 ---
 
-## D) Verdict (Session 7)
+## D) Verdict
 
 - **Ranking**: Logistic baseline leads on AP (0.834 vs 0.821), RF leads on ROC-AUC (0.870 vs 0.856).  
 - **Operating point (high-precision regime)**: RF achieves higher recall at essentially the same precision, giving a higher F1.  
-- **Class weights**: With the same threshold (0.635), balanced logistic shows negligible change (slightly ↑Precision, slightly ↓Recall). Use the optimized balanced threshold (saved) if you plan to keep weights; otherwise, the baseline logistic remains a solid reference.
+- **Class weights**: With the same threshold (0.636), baseline logistic shows slightly ↑Precision and unchanged Recall. Use the optimized balanced threshold (saved) if you plan to keep weights; otherwise, the baseline logistic remains a solid reference.
 
 ---
 
