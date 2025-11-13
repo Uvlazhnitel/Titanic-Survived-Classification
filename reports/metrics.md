@@ -1,4 +1,3 @@
-Session 7 — Addendum (Models Comparison incl. Class Weights)
 # Metrics Report
 
 ## Positive Class
@@ -19,6 +18,7 @@ For models where per-fold CV was not yet re-run (only OOF AUCs available), the C
 | LogisticRegression (baseline)  | 0.856 ± 0.031     | 0.834 ± 0.029    | OOF AUCs: ROC=0.856, AP=0.831                                         |
 | RandomForestClassifier         | 0.870 ± 0.016     | 0.821 ± 0.031    | OOF AUCs: ROC=0.871, AP=0.812                                         |
 | LogisticRegression (+balanced) | 0.856 ± 0.029     | 0.832 ± 0.028    | OOF AUCs: ROC=0.856, AP=0.832                                         |
+| HBC Model                      | 0.868 ± 0.030     | 0.835 ± 0.036    | OOF AUCs: ROC=0.868, AP=0.826                                         |
 
 **Action item (optional)**: Re-run `cross_validate(..., scoring={"roc_auc","average_precision"})` for the balanced model to fill CV mean ± std.
 
@@ -31,9 +31,10 @@ Thresholds are selected on OOF predictions using the same rule as Session 5
 
 | Model                          | Thr.  | Precision@Thr | Recall@Thr | F1@Thr | Protocol                                                                 |
 |--------------------------------|-------|---------------|------------|--------|--------------------------------------------------------------------------|
-| LogisticRegression (baseline)  | 0.636 | 0.850         | 0.623      | 0.719  | OOF, 5-fold; Strategy: precision ≥ 0.85 → maximize recall; Chosen index: 486 |
-| RandomForestClassifier         | 0.640 | 0.852         | 0.652      | 0.739  | OOF, 5-fold                                                             |
-| LogisticRegression (+balanced) | 0.743 | 0.854         | 0.619      | 0.718  | OOF, 5-fold; Strategy: precision ≥ 0.85 → maximize recall; Chosen index: 488 |
+| LogisticRegression (baseline)  | 0.636 | 0.850         | 0.623      | 0.719  | OOF, 5-fold; Chosen index: 486                                           |
+| RandomForestClassifier         | 0.640 | 0.852         | 0.652      | 0.739  | OOF, 5-fold; Chosen index: 221                                           |
+| LogisticRegression (+balanced) | 0.743 | 0.854         | 0.619      | 0.718  | OOF, 5-fold; Chosen index: 488                                           |
+| HBC Model                      | 0.700 | 0.848         | 0.612      | 0.711  | OOF, 5-fold; Chosen index: 485                                           |
 
 ---
 
@@ -51,35 +52,15 @@ Thresholds are selected on OOF predictions using the same rule as Session 5
 - **TN**=410, **FP**=29, **FN**=104, **TP**=169  
 - **Precision**=0.854, **Recall**=0.619, **F1**=0.718  
 
----
-
-## D) Verdict
-
-- **Ranking**: Logistic baseline leads on AP (0.834 vs 0.821), RF leads on ROC-AUC (0.870 vs 0.856).  
-- **Operating point (high-precision regime)**: RF achieves higher recall at essentially the same precision, giving a higher F1.  
-- **Class weights**: With the same threshold (0.636), baseline logistic shows slightly ↑Precision and unchanged Recall. Use the optimized balanced threshold (saved) if you plan to keep weights; otherwise, the baseline logistic remains a solid reference.
+### HBC Model @ 0.700
+- **TN**=409, **FP**=30, **FN**=106, **TP**=167  
+- **Precision**=0.848, **Recall**=0.612, **F1**=0.711  
 
 ---
 
-## E) Validation Protocol
+## Conclusion
 
-- **Train/valid**: 5× StratifiedKFold (`shuffle=True, random_state=42`); OOF predictions for thresholding.  
-- **Test set**: untouched until the final evaluation.  
-- **Preprocessing**: identical `ColumnTransformer` for all models.
-
----
-
-## F) Artifacts
-
-- **Baseline threshold**: `reports/threshold.npy`  
-- **RF threshold**: `reports/threshold_rf.npy`  
-- **Balanced-logistic threshold**: `reports/threshold_bl.npy`  
-- **ROC / PR figures**: under `reports/figures/` (per model)
-
----
-
-## G) Environment
-
-- **Python**: 3.11.14  
-- **scikit-learn**: 1.7.2  
-- **RANDOM_STATE**: 42
+- The **RandomForestClassifier** remains the best-performing model in terms of F1 score (0.739) and recall (0.652) at the selected threshold, making it the most balanced choice for maximizing recall while maintaining high precision.
+- The **HBC Model** performs slightly worse than RandomForest in terms of recall (0.612 vs. 0.652) and F1 score (0.711 vs. 0.739), but it is comparable in terms of precision (0.848 vs. 0.852). Its ROC-AUC (0.868) and PR-AUC (0.826) are also competitive.
+- The **LogisticRegression (+balanced)** model has the highest precision (0.854) but lower recall (0.619) and F1 score (0.718), making it less suitable for recall-sensitive tasks.
+- Overall, RandomForest is recommended for tasks prioritizing recall, while HBC could be considered as an alternative if slightly lower recall is acceptable.
