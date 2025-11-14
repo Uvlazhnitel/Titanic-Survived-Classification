@@ -47,11 +47,11 @@ Thresholds are selected on OOF predictions using the same rule as Session 5
 - **TN**=410, **FP**=29, **FN**=104, **TP**=169  
 - **Precision**=0.854, **Recall**=0.619, **F1**=0.718  
 
-### HGB Model @ 0.700
+### HGB Model @ 0.798
 - **TN**=409, **FP**=30, **FN**=106, **TP**=167  
 - **Precision**=0.852, **Recall**=0.612, **F1**=0.711  
 
-### HGB Model @ 0.679
+### HGB Model (native) @ 0.679
 - **TN**=407, **FP**=32, **FN**=91, **TP**=182  
 - **Precision**=0.850, **Recall**=0.667, **F1**=0.747  
 
