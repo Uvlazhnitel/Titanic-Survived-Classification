@@ -1,4 +1,5 @@
 # src/preprocessing.py
+import pandas as pd
 import numpy as np
 from sklearn import set_config
 set_config(transform_output="pandas")
@@ -9,7 +10,7 @@ from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
 from sklearn.metrics.pairwise import rbf_kernel
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import FunctionTransformer, StandardScaler, OneHotEncoder
+from sklearn.preprocessing import FunctionTransformer, OrdinalEncoder, StandardScaler, OneHotEncoder
 
 
 # ---------------------------
@@ -168,3 +169,66 @@ def build_preprocessing(
         verbose_feature_names_out=True
     )
     return preproc
+
+# ---------------------------
+# HGB-native (ordinal categories, no num imputation/scaling)
+# ---------------------------
+
+def make_cat_pipeline_ordinal():
+    """
+    Categorical pipeline for HGB-native:
+    - OrdinalEncoder -> each category mapped to an integer.
+    - Robust to unseen categories via unknown_value=-1.
+    NOTE: No imputation here; OrdinalEncoder can pass NaN through if present in input.
+    """
+    # If your sklearn supports encoded_missing_value, you can add encoded_missing_value=-1
+    try:
+        enc = OrdinalEncoder(
+            handle_unknown="use_encoded_value",
+            unknown_value=-1,                # unseen categories -> -1
+            encoded_missing_value=-1         # treat missing as -1 (if supported by your sklearn)
+        )
+    except TypeError:
+        # Fallback for older sklearn without encoded_missing_value
+        enc = OrdinalEncoder(
+            handle_unknown="use_encoded_value",
+            unknown_value=-1
+        )
+
+    return Pipeline(steps=[
+        ("ordinal", enc)
+    ])
+
+
+def build_preprocessing_hgb_native(
+    num_cols,
+    cat_cols,
+    cat_first=True,
+):
+    """
+    HGB-native preprocessing:
+    - Categorical: OrdinalEncoder (1 int-coded column per feature).
+    - Numeric: explicit passthrough ONLY for num_cols.
+    - All other columns are DROPPED to avoid raw strings leaking in.
+    - Output order: [categoricals] + [numerics] -> cat indices are 0..len(cat_cols)-1.
+    """
+    cat_pipe = make_cat_pipeline_ordinal()
+
+    transformers = []
+    if cat_first:
+        # put categoricals first, then numerics
+        transformers.append(("cat", cat_pipe, list(cat_cols)))
+        transformers.append(("num", "passthrough", list(num_cols)))
+        cat_indices = np.arange(len(cat_cols))
+    else:
+        # (not recommended) numerics first -> cat indices are not a simple range
+        transformers.append(("num", "passthrough", list(num_cols)))
+        transformers.append(("cat", cat_pipe, list(cat_cols)))
+        cat_indices = None
+
+    preproc = ColumnTransformer(
+        transformers=transformers,
+        remainder="drop",                
+        verbose_feature_names_out=False
+    )
+    return preproc, cat_indices
