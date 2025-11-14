@@ -201,55 +201,34 @@ def make_cat_pipeline_ordinal():
 
 
 def build_preprocessing_hgb_native(
-    num_cols,     # e.g. ["Age","SibSp","Parch","Fare","Pclass"]
-    cat_cols,     # e.g. ["Sex","Embarked"]
+    num_cols,
+    cat_cols,
     cat_first=True,
 ):
     """
-    ColumnTransformer tailored for HistGradientBoostingClassifier:
-
-    - Categorical: OrdinalEncoder (1 column per feature), no OHE.
-    - Numeric: passthrough (no scaler, no imputer) — HGB handles NaNs natively.
-    - Output order (recommended): [categoricals] + [numerics]
-      -> then categorical feature indices are simply range(len(cat_cols)).
-
-    Returns
-    -------
-    preproc : ColumnTransformer
-        The preprocessing transformer.
-    cat_indices : np.ndarray
-        Indices of categorical features in the transformed matrix, pass to
-        HistGradientBoostingClassifier(categorical_features=cat_indices).
-
-    Usage (outside this module):
-    ----------------------------
-    preproc, cat_idx = build_preprocessing_hgb_native(num_cols, cat_cols)
-    hgb = HistGradientBoostingClassifier(
-        categorical_features=cat_idx,
-        random_state=42
-    )
-    pipe = Pipeline([("prep", preproc), ("clf", hgb)])
+    HGB-native preprocessing:
+    - Categorical: OrdinalEncoder (1 int-coded column per feature).
+    - Numeric: explicit passthrough ONLY for num_cols.
+    - All other columns are DROPPED to avoid raw strings leaking in.
+    - Output order: [categoricals] + [numerics] -> cat indices are 0..len(cat_cols)-1.
     """
     cat_pipe = make_cat_pipeline_ordinal()
 
-    # We intentionally put categorical first so indices are trivial.
     transformers = []
     if cat_first:
+        # put categoricals first, then numerics
         transformers.append(("cat", cat_pipe, list(cat_cols)))
-        # numeric passthrough will be appended via remainder="passthrough"
+        transformers.append(("num", "passthrough", list(num_cols)))
         cat_indices = np.arange(len(cat_cols))
     else:
-        # If you really want numerics first, we can compute indices
-        # after fit using get_feature_names_out, but cat_first=True is recommended.
-        transformers.append(("num_passthrough", "passthrough", list(num_cols)))
+        # (not recommended) numerics first -> cat indices are not a simple range
+        transformers.append(("num", "passthrough", list(num_cols)))
         transformers.append(("cat", cat_pipe, list(cat_cols)))
-        # In this branch, cat indices are not a simple range; prefer cat_first=True.
-        # We still return a placeholder; compute true indices after fit if needed.
         cat_indices = None
 
     preproc = ColumnTransformer(
         transformers=transformers,
-        remainder="passthrough",            # numeric columns flow through unchanged
-        verbose_feature_names_out=False     # cleaner feature names; order is stable
+        remainder="drop",                
+        verbose_feature_names_out=False
     )
     return preproc, cat_indices
