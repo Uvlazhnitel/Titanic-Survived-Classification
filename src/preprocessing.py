@@ -198,18 +198,10 @@ def make_cat_pipeline_ordinal():
         ("ordinal", enc)
     ])
 
-def _to_float_df(df):
-    """Cast every column to numeric; non-numeric becomes NaN."""
-    out = df.copy()
-    for c in out.columns:
-        out[c] = pd.to_numeric(out[c], errors="coerce")
-    return out
-
 def make_num_pipeline_hgb():
     """Numeric branch for HGB: just cast to float, no imputer/scaler."""
     return Pipeline(steps=[
         ("to_float", FunctionTransformer(
-            _to_float_df,
             validate=False,
             feature_names_out="one-to-one"
         )),
@@ -232,7 +224,7 @@ def build_preprocessing_hgb_native(num_cols, cat_cols, cat_first=True):
 
     preproc = ColumnTransformer(
         transformers=transformers,
-        remainder="drop",                   # critical: drop any other columns (Name/Ticket/etc.)
+        remainder="passthrough",                   
         verbose_feature_names_out=False
     )
     return preproc, cat_indices
