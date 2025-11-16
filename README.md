@@ -1,139 +1,196 @@
-# Titanic Classification Project
+# Titanic Survival Classification
 
-## Goal
+Predicting passenger survival on the RMS Titanic using a modern, reproducible machine learning workflow.  
+This project iteratively experiments with several supervised classifiers, evaluates them with robust cross‑validation, and selects operating thresholds based on precision/recall trade‑offs.
 
-Build a reproducible end-to-end pipeline for Titanic survival prediction:
-- Proper data split → `Pipeline`/`ColumnTransformer` → Cross-validation (CV) evaluation → Threshold selection → Final evaluation on the test set.
-
----
-
-## Data
-
-- **Dataset**: `data/raw.csv` (Titanic dataset).
-- **Target**: `Survived` (binary: 0/1).
-- **Features**:
-  - **Numeric**: `Age`, `Fare`, `SibSp`, `Parch`, `Pclass`, etc.
-  - **Categorical**: `Sex`, `Embarked` (optionally treat `Pclass` as categorical).
-  - **Engineered inside the pipeline**:
-    - `FamilySize`, `FarePerPerson`, `log1p(Fare)`, optional cluster-similarity features (e.g., `KMeans` + `RBF`).
+> NOTE: Some repository details were gathered via code search and those search results may be incomplete. For full context browse the repository directly: [Code search: "metrics"](https://github.com/Uvlazhnitel/Titanic-Survived-Classification/search?q=metrics)
 
 ---
 
-## Metrics & Targets (Validated via CV/OOF)
+## 1. Problem Statement
 
-### Primary Ranking Metrics (OOF, mean ± std over folds):
-- **PR-AUC (Average Precision)**: ≥ 0.60
-- **ROC-AUC**: ≥ 0.88
+Given passenger attributes (e.g. class, sex, age, family relations, fare, embarkation port), predict whether a passenger survived (`Survived = 1`).  
+We treat this as a binary classification problem and focus on ranking quality (ROC‑AUC, PR‑AUC) and then deriving a high‑precision operating point to maximize recall subject to a precision constraint.
 
-### Operating Point Metrics @ Chosen Threshold:
-- **Precision**: ≥ 0.85
-- **Recall**: ≥ 0.50
-- **F1**: ≥ 0.70
-- **Accuracy**: Informational only.
-
-### Thresholding Rule:
-- Use one fixed strategy across models:
-  - Either maximize F1 or set `Precision ≥ T` (e.g., 0.85) and then maximize Recall.
-- Save the chosen threshold to `reports/threshold_<model>.npy`.
-- Do not tune the threshold on the test set.
+- Positive class: `Survived = 1`
+- Train prevalence (from current processed training split): **38.3%**  
+  This prevalence provides a baseline for interpreting precision and PR‑AUC.
 
 ---
 
-## Validation Protocol
+## 2. Data
 
-1. **Data Splitting**:
-   - Split once into train/test and freeze the test indices (`data/splits/*`).
+Source: Kaggle Titanic dataset (stored locally under `data/raw/Titanic-Dataset.csv`).  
+(Ensure you have permission / have downloaded the dataset before running code.)
 
-2. **Cross-Validation**:
-   - Use `StratifiedKFold(n_splits=5, shuffle=True, random_state=42)`.
+Primary features currently referenced in notebooks:
+- Numerical: `Age`, `SibSp`, `Parch`, `Fare`
+- Categorical: `Sex`, `Pclass`, `Embarked`
 
-3. **OOF Predictions**:
-   - Use `cross_val_predict(..., method="predict_proba")`.
+Target column: `Survived`
 
-4. **Reporting**:
-   - Report **ROC-AUC** and **PR-AUC** as OOF mean ± std.
-   - Save plots to:
-     - `reports/figures/roc_oof.png`
-     - `reports/figures/pr_oof.png`.
-
-5. **Threshold Selection**:
-   - Perform on OOF predictions only.
-   - Save to `reports/threshold_<model>.npy`.
-
-6. **Final Test Evaluation**:
-   - Run once after the pipeline is locked.
+(If additional engineered features exist in `src/` they will be documented in future revisions.)
 
 ---
 
-## Models & Comparison Rules
+## 3. Project Structure (key folders)
 
-1. **Baseline**:
-   - `LogisticRegression` (with/without `class_weight='balanced'` as decided in Session 6).
-
-2. **Tree Ensemble**:
-   - `RandomForestClassifier` (Session 7).
-
-3. **Advanced**:
-   - `HistGradientBoostingClassifier` (Session 10).
-
-4. **Preprocessing**:
-   - Use the same preprocessing pipeline (`build_preprocessing(...)`) for all models.
-
-5. **Thresholding**:
-   - Apply the same thresholding rule for fair comparison across models.
-
-6. **Metrics Reporting**:
-   - Record per-model metrics in `reports/metrics.md`:
-     - OOF **ROC-AUC**, **PR-AUC** (mean ± std).
-     - Threshold, **Precision@thr**, **Recall@thr**, **F1@thr** (OOF).
-     - Confusion matrix @ threshold (OOF).
+```
+data/
+  raw/              # Original CSV(s)
+notebooks/
+  03_metrics_thresholds.ipynb  # Evaluation & threshold selection workflow
+reports/
+  metrics.md        # Human-readable summary of CV & threshold metrics
+  metrics_cv.csv    # Raw per-fold and aggregate metrics
+src/
+  preprocessing.py  # build_preprocessing(...) pipeline
+venv or .venv/      # (optional) Local Python virtual environment
+```
 
 ---
 
-## Quality Rules
+## 4. Environment & Installation
 
-1. **Test Set**:
-   - Create once and do not touch until the end.
+```bash
+# Create and activate virtual environment (example)
+python -m venv .venv
+source .venv/bin/activate   # Linux/macOS
+# or: .venv\Scripts\activate (Windows PowerShell)
 
-2. **Preprocessing**:
-   - All preprocessing must reside inside the `Pipeline`/`ColumnTransformer` after the split (to avoid data leakage).
+# Install dependencies (adjust if requirements file is added later)
+pip install -r requirements.txt
+```
 
-3. **Cross-Validation**:
-   - Use `StratifiedKFold(n_splits=5, shuffle=True, random_state=42)` for CV and OOF predictions.
-
-4. **Thresholds & Tuning**:
-   - Choose thresholds, calibration, feature selection, and hyper-parameter tuning on OOF/CV only (never on the test set).
-
-5. **Reproducibility**:
-   - Fix seeds (`random_state=42`) for all stochastic components (CV, models, `KMeans`, etc.).
-
----
-
-## Leakage & Validation Checklist
-
-### Splits & CV:
-- Test/holdout untouched until final evaluation.
-- Single CV scheme across experiments (5-fold Stratified, shuffled, fixed seed).
-- All reported metrics and curves computed from OOF predictions.
-
-### Pipelines:
-- Imputation, scaling, OHE, engineered features, and clustering are inside the `Pipeline`/`ColumnTransformer`.
-- No global fit/transform on the full train outside CV used for evaluation.
-
-### Features:
-- No target/label/service columns among features (`Survived`, `is_train`, `fold_id`, etc.).
-- No future/temporal info (N/A for Titanic); note potential groups (`Ticket`/family).
-- High-cardinality/ID-like columns (`Ticket`, `Cabin`, `Name`) marked as monitor.
-
-### Thresholding & Tuning:
-- One fixed thresholding rule across models, chosen on OOF; saved to `reports/threshold_<model>.npy`.
-- Hyper-parameter search (when used) logged via `cv_results_`; test evaluated once.
-
+If a `requirements.txt` is not yet present, install the commonly used packages:
+```bash
+pip install pandas scikit-learn matplotlib
+```
 
 ---
 
-## Reproducibility
+## 5. Preprocessing & Modeling
 
-- Python 3.10+, pinned dependencies, fixed seeds.
-- Use `set_config(transform_output="pandas")` in preprocessing for clean feature names.
-- All experiments are re-runnable end-to-end from notebooks/scripts with the same CV protocol.
+The preprocessing pipeline is constructed via `build_preprocessing(num_cols, cat_cols, remainder="drop")` (see `src/preprocessing.py`), then composed with estimators in a `sklearn.pipeline.Pipeline`.
+
+Current models evaluated (as seen in `reports/metrics.md`):
+1. LogisticRegression (baseline)
+2. LogisticRegression (class-balanced variant)
+3. RandomForestClassifier
+4. Histogram-Based Gradient Boosting (HGB Model)
+5. HGB Model (native categorical handling variant)
+
+---
+
+## 6. Evaluation Methodology
+
+- Split: Stratified train/test split (20% test hold‑out) for exploratory work.
+- Cross‑Validation: 5× StratifiedKFold (`shuffle=True`, `random_state=42`) for model ranking.
+- Ranking Metrics: Mean ± std of ROC‑AUC and PR‑AUC (Average Precision) across folds.
+- Operating Threshold: Selected on out‑of‑fold (OOF) predictions using rule:
+  “Find threshold achieving precision ≥ target, then maximize recall.”
+  (Target precision is implied by session logic; adjust/configure explicitly in future code.)
+
+Metrics CSV (`reports/metrics_cv.csv`) provides raw per-fold values for one model configuration.  
+Human-readable summary (`reports/metrics.md`) consolidates multiple models.
+
+### A) Ranking Metrics (CV mean ± std)
+
+(Extracted verbatim from `reports/metrics.md`)
+
+| Model                          | ROC-AUC (CV)       | PR-AUC / AP (CV) | Notes                                                                 |
+|--------------------------------|--------------------|------------------|-----------------------------------------------------------------------|
+| LogisticRegression (baseline)  | 0.856 ± 0.031      | 0.834 ± 0.029    | OOF AUCs: ROC=0.856, AP=0.831                                         |
+| RandomForestClassifier         | 0.870 ± 0.016      | 0.821 ± 0.031    | OOF AUCs: ROC=0.871, AP=0.812                                         |
+| LogisticRegression (+balanced) | 0.856 ± 0.029      | 0.832 ± 0.028    | OOF AUCs: ROC=0.856, AP=0.832                                         |
+| HGB Model                      | 0.868 ± 0.030      | 0.835 ± 0.036    | OOF AUCs: ROC=0.868, AP=0.826                                         |
+| HGB Model (native)             | 0.873 ± 0.019      | 0.854 ± 0.021    | OOF AUCs: ROC=0.872, AP=0.847                                         |
+
+### B) Operating Point (@ Threshold on OOF)
+
+| Model                          | Thr.  | Precision@Thr | Recall@Thr | F1@Thr | Protocol                                        |
+|--------------------------------|-------|---------------|------------|--------|-------------------------------------------------|
+| LogisticRegression (baseline)  | 0.636 | 0.850         | 0.623      | 0.719  | OOF, 5-fold; Chosen index: 486                  |
+| RandomForestClassifier         | 0.640 | 0.852         | 0.652      | 0.739  | OOF, 5-fold; Chosen index: 221                  |
+| LogisticRegression (+balanced) | 0.743 | 0.854         | 0.619      | 0.718  | OOF, 5-fold; Chosen index: 488                  |
+| HGB Model                      | 0.798 | 0.848         | 0.612      | 0.711  | OOF, 5-fold; Chosen index: 485                  |
+| HGB Model (native)             | 0.679 | 0.850         | 0.667      | 0.747  | OOF, 5-fold; Chosen index: 463                  |
+
+### C) Example Confusion Matrix (OOF) @ Listed Threshold
+
+RandomForest @ 0.640:
+- TN = 408
+- FP = 31
+- FN = 95
+- TP = 178
+
+---
+
+## 7. Reproducing Results
+
+1. Ensure data file exists: `data/raw/Titanic-Dataset.csv`.
+2. Open `notebooks/03_metrics_thresholds.ipynb`.
+3. Run cells sequentially to:
+   - Load data
+   - Build preprocessing pipeline
+   - Fit baseline model
+   - (Extend notebook to loop over additional models & record OOF predictions)
+4. Consolidate metrics:
+   - Update / regenerate `reports/metrics_cv.csv` for raw folds.
+   - Render summary & threshold analyses into `reports/metrics.md`.
+
+Future improvements:
+- Automate model suite evaluation into a single script (`src/train.py` candidate).
+- Add explicit configuration for precision target.
+- Persist OOF predictions for auditability.
+- Introduce MLflow or DVC for experiment tracking and data versioning.
+
+---
+
+## 8. Model Selection Notes
+
+The best ranking performance (highest mean ROC‑AUC & PR‑AUC) currently belongs to the HGB Model (native categorical variant), edging other models with both strong ROC‑AUC (0.873 ± 0.019) and PR‑AUC (0.854 ± 0.021), while maintaining a competitive operating F1 after thresholding.
+
+Threshold selection prioritizes retaining high precision (~0.85) while pushing recall upward. The RandomForest and HGB native model offer improved recall vs. baseline logistic regression under similar precision constraints.
+
+---
+
+## 9. Next Steps / Roadmap
+
+- Add proper `requirements.txt` / `pyproject.toml`.
+- Integrate automated cross‑validation and threshold tuning script.
+- Add calibration analysis (e.g. reliability curves) for probability outputs.
+- Explore feature importance & SHAP explanations.
+- Consider handling of missing data / advanced imputation if not already present.
+- Containerize (Docker) for reproducible deployment.
+- Provide a simple inference interface (`predict.py` or FastAPI microservice).
+
+---
+
+## 10. Contributing
+
+1. Fork / branch from `main`.
+2. Follow conventional commit messages.
+3. Add or update metrics in `reports/` when modifying model code.
+4. Open a PR describing:
+   - Data changes (if any)
+   - Model adjustments
+   - Impact on ROC/PR‑AUC & operating point metrics
+
+---
+
+## 11. License
+
+(Insert license information here if a LICENSE file is added; otherwise choose an appropriate OSI-approved license.)
+
+---
+
+## 12. Acknowledgments
+
+- Dataset: Kaggle Titanic competition.
+- Libraries: scikit-learn, pandas, matplotlib.
+- Inspiration: Classic binary classification benchmark for illustrating end‑to‑end ML workflow.
+
+---
+
+Maintainer: @Uvlazhnitel
