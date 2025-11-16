@@ -81,7 +81,7 @@ Observations:
   the best fast config.
 
 Decision:
-- We select the fast configuration (rank 1) as the final leader for this step.
+- I select the fast configuration (rank 1) as the final leader for this step.
 
 # Conclusion
 
