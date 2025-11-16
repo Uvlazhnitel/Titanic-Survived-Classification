@@ -77,7 +77,7 @@ Observations:
   - relatively large min_samples_leaf (≈ 14–30),
   - max_iter between ≈ 120 and 500.
 - Configurations with much larger max_iter (e.g. 300–500) are noticeably slower
-  (fit time up to 3–4× higher) but do not bring a clear AP gain compared to
+  (fit time up to 3-4x higher) but do not bring a clear AP gain compared to
   the best fast config.
 
 Decision:
