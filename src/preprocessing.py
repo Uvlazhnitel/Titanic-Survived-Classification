@@ -1,5 +1,4 @@
 # src/preprocessing.py
-import pandas as pd
 import numpy as np
 from sklearn import set_config
 set_config(transform_output="pandas")
@@ -179,7 +178,9 @@ def make_cat_pipeline_ordinal():
     Categorical pipeline for HGB-native:
     - OrdinalEncoder -> each category mapped to an integer.
     - Robust to unseen categories via unknown_value=-1.
-    NOTE: No imputation here; OrdinalEncoder can pass NaN through if present in input.
+    NOTE: No imputation here.
+    - If encoded_missing_value=-1 is supported (newer sklearn), missing values (NaN) are encoded as -1.
+    - If not supported (older sklearn), missing values (NaN) may be passed through, which could cause issues.
     """
     # If your sklearn supports encoded_missing_value, you can add encoded_missing_value=-1
     try:
@@ -221,10 +222,10 @@ def build_preprocessing_hgb_native(
         transformers.append(("num", "passthrough", list(num_cols)))
         cat_indices = np.arange(len(cat_cols))
     else:
-        # (not recommended) numerics first -> cat indices are not a simple range
+        # (not recommended) numerics first -> cat indices are offset by the number of numeric columns
         transformers.append(("num", "passthrough", list(num_cols)))
         transformers.append(("cat", cat_pipe, list(cat_cols)))
-        cat_indices = None
+        cat_indices = np.arange(len(num_cols), len(num_cols) + len(cat_cols))
 
     preproc = ColumnTransformer(
         transformers=transformers,
