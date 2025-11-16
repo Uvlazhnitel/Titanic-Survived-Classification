@@ -57,32 +57,6 @@ Thresholds are selected on OOF predictions using the same rule as Session 5
 
 ---
 
-### Hyperparameter tuning (HistGradientBoostingClassifier, RandomizedSearchCV)
-
-- Metric: Average Precision (5-fold Stratified CV)
-- Number of random configurations: 40
-
-Best configuration (rank 1):
-- learning_rate ≈ 0.068
-- max_iter = 121
-- max_leaf_nodes = 39
-- min_samples_leaf = 21
-- mean AP = 0.855 (std ≈ 0.024 across folds)
-- mean fit time ≈ 0.09 s per fold
-
-Observations:
-- Top-5 configs have very similar AP (0.851–0.855), all with:
-  - small learning_rate (~0.01–0.07),
-  - max_leaf_nodes in the range 25–40,
-  - relatively large min_samples_leaf (≈ 14–30),
-  - max_iter between ≈ 120 and 500.
-- Configurations with much larger max_iter (e.g. 300–500) are noticeably slower
-  (fit time up to 3-4x higher) but do not bring a clear AP gain compared to
-  the best fast config.
-
-Decision:
-- We select the fast configuration (rank 1) as the final leader for this step.
-
 # Conclusion
 
 ### LogisticRegression (Baseline)
