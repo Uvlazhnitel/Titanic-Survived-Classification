@@ -179,13 +179,7 @@ Threshold selection prioritizes retaining high precision (~0.85) while pushing r
 
 ---
 
-## 11. License
-
-(Insert license information here if a LICENSE file is added; otherwise choose an appropriate OSI-approved license.)
-
----
-
-## 12. Acknowledgments
+## 11. Acknowledgments
 
 - Dataset: Kaggle Titanic competition.
 - Libraries: scikit-learn, pandas, matplotlib.
