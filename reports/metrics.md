@@ -11,11 +11,11 @@ For models where per-fold CV was not yet re-run (only OOF AUCs available), the C
 
 | Model                          | ROC-AUC (CV)       | PR-AUC / AP (CV) | Notes                                                                 |
 |--------------------------------|--------------------|------------------|-----------------------------------------------------------------------|
-| LogisticRegression (baseline)  | 0.856 ± 0.031     | 0.834 ± 0.029    | OOF AUCs: ROC=0.856, AP=0.831                                         |
-| RandomForestClassifier         | 0.870 ± 0.016     | 0.821 ± 0.031    | OOF AUCs: ROC=0.871, AP=0.812                                         |
-| LogisticRegression (+balanced) | 0.856 ± 0.029     | 0.832 ± 0.028    | OOF AUCs: ROC=0.856, AP=0.832                                         |
-| HGB Model                      | 0.868 ± 0.030     | 0.835 ± 0.036    | OOF AUCs: ROC=0.868, AP=0.826                                         |
-| HGB Model (native)             | 0.873 ± 0.019     | 0.854 ± 0.021    | OOF AUCs: ROC=0.872, AP=0.847                                         |
+| LogisticRegression (baseline)  | 0.856 ± 0.031      | 0.834 ± 0.029    | OOF AUCs: ROC=0.856, AP=0.831                                         |
+| RandomForestClassifier         | 0.870 ± 0.016      | 0.821 ± 0.031    | OOF AUCs: ROC=0.871, AP=0.812                                         |
+| LogisticRegression (+balanced) | 0.856 ± 0.029      | 0.832 ± 0.028    | OOF AUCs: ROC=0.856, AP=0.832                                         |
+| HGB Model                      | 0.868 ± 0.030      | 0.835 ± 0.036    | OOF AUCs: ROC=0.868, AP=0.826                                         |
+| HGB Model (native)             | 0.873 ± 0.019      | 0.854 ± 0.021    | OOF AUCs: ROC=0.872, AP=0.847; tuned via RandomizedSearchCV + GridSearchCV |
 
 ---
 
@@ -31,6 +31,7 @@ Thresholds are selected on OOF predictions using the same rule as Session 5
 | LogisticRegression (+balanced) | 0.743 | 0.854         | 0.619      | 0.718  | OOF, 5-fold; Chosen index: 488                                           |
 | HGB Model                      | 0.798 | 0.848         | 0.612      | 0.711  | OOF, 5-fold; Chosen index: 485                                           |
 | HGB Model (native)             | 0.679 | 0.850         | 0.667      | 0.747  | OOF, 5-fold; Chosen index: 463                                           |
+
 ---
 
 ## C) Confusion Matrices (OOF) @ Listed Thresholds
@@ -57,45 +58,137 @@ Thresholds are selected on OOF predictions using the same rule as Session 5
 
 ---
 
-### Hyperparameter tuning (HistGradientBoostingClassifier, RandomizedSearchCV)
+## D) Hyperparameter tuning (HistGradientBoostingClassifier)
 
-- Metric: Average Precision (5-fold Stratified CV)
-- Number of random configurations: 40
+### 1) RandomizedSearchCV (global search)
 
-Best configuration (rank 1):
-- learning_rate ≈ 0.068
-- max_iter = 121
-- max_leaf_nodes = 39
-- min_samples_leaf = 21
-- mean AP = 0.855 (std ≈ 0.024 across folds)
-- mean fit time ≈ 0.09 s per fold
+- Estimator: `Pipeline(preprocess → HistGradientBoostingClassifier(categorical_features=cat_idx))`
+- Metric: Average Precision (`scoring="average_precision"`)
+- CV: 5-fold StratifiedKFold (`shuffle=True, random_state=42`)
+- Number of random configurations: 40  
+- Search space:
+  - `learning_rate` ~ `uniform(0.01, 0.19)`  → [0.01, 0.20)
+  - `max_leaf_nodes` ~ `randint(15, 50)`
+  - `min_samples_leaf` ~ `randint(5, 30)`
+  - `max_iter` ~ `randint(100, 600)`
 
-Observations:
-- Top-5 configs have very similar AP (0.851–0.855), all with:
-  - small learning_rate (~0.01–0.07),
-  - max_leaf_nodes in the range 25–40,
-  - relatively large min_samples_leaf (≈ 14–30),
-  - max_iter between ≈ 120 and 500.
-- Configurations with much larger max_iter (e.g. 300–500) are noticeably slower
-  (fit time up to 3-4x higher) but do not bring a clear AP gain compared to
-  the best fast config.
+**Best configuration (RandomizedSearch, rank 1):**
 
-Decision:
-- We select the fast configuration (rank 1) as the final leader for this step.
+- `learning_rate ≈ 0.0678`
+- `max_iter = 121`
+- `max_leaf_nodes = 39`
+- `min_samples_leaf = 21`
+- mean CV AP ≈ **0.8549**  
+- std across folds ≈ **0.024**  
+- mean fit time ≈ **0.09 s** per fold
+
+**Observations (RandomizedSearch):**
+
+- Top configurations have:
+  - **small learning_rate** (~0.01–0.08),
+  - `max_leaf_nodes` typically between **25 and 40**,
+  - relatively large `min_samples_leaf` (≈ 14–30),
+  - `max_iter` in a broad range (~120–500).
+- Configurations with very large `max_iter` are noticeably slower (fit time 3–4× higher)  
+  without providing clear AP gains over the best fast configuration.
+
+RandomizedSearchCV was used as a **global search** to identify a good region in the hyperparameter space.
+
+---
+
+### 2) Local GridSearchCV around the RandomizedSearch optimum
+
+After RandomizedSearchCV, a **local grid search** was performed around the best configuration to refine the hyperparameters.
+
+- Base point (from RandomizedSearch best):  
+  - `learning_rate ≈ 0.0678`  
+  - `max_iter = 121`  
+  - `max_leaf_nodes = 39`  
+  - `min_samples_leaf = 21`
+
+**Local grid definition:**
+
+- Tuned hyperparameters:
+  - `learning_rate`: **[0.05, 0.07, 0.09]**
+  - `max_leaf_nodes`: **[30, 39, 45]**
+  - `min_samples_leaf`: **[15, 21, 27]**
+- Fixed:
+  - `max_iter = 150`
+  - all other HistGB parameters kept at their default / previously chosen values.
+
+- Estimator: same pipeline (`preprocess → HGB (native)`).
+- Metric: Average Precision (`scoring="average_precision"`).
+- CV: same 5-fold StratifiedKFold (`shuffle=True, random_state=42`).
+- Total combinations in the grid: 3 × 3 × 3 = **27**.
+
+**Best configuration (local GridSearchCV):**
+
+- `learning_rate = 0.05`
+- `max_iter = 150`
+- `max_leaf_nodes = 30`
+- `min_samples_leaf = 21`
+- mean CV AP ≈ **0.8555**
+
+This slightly improves AP compared to the RandomizedSearch best (0.8555 vs 0.8549)  
+with similar model complexity and moderate training time.
+
+**Decision:**
+
+- Use **RandomizedSearchCV** for **global exploration** of the hyperparameter space.
+- Use **local GridSearchCV** as a **refinement step** around the best random configuration.
+- Adopt the **GridSearchCV best configuration** as the **final leader** for the HGB (native) model:
+
+> Final HGB (native) hyperparameters:  
+> - `learning_rate = 0.05`  
+> - `max_iter = 150`  
+> - `max_leaf_nodes = 30`  
+> - `min_samples_leaf = 21`  
+
+These values are used in the final pipeline for subsequent OOF/test evaluation.
+
+---
 
 # Conclusion
 
 ### LogisticRegression (Baseline)
-A stable reference model with strong ranking metrics (PR-AUC ≈ 0.834 CV). At the working point (precision ≈ 0.85), it achieves recall ≈ 0.62 and F1 ≈ 0.72. While it serves as a good baseline, it lags behind tree-based models in recall and F1.
+A stable reference model with strong ranking metrics (PR-AUC ≈ 0.834 CV).  
+At the working point (precision ≈ 0.85), it achieves recall ≈ 0.623 and F1 ≈ 0.719.  
+While it serves as a good baseline, it lags behind tree-based models in recall and F1.
 
 ### LogisticRegression (+Balanced)
-Adding class weights provides no significant benefit. PR-AUC remains at ≈ 0.832 CV, and recall slightly decreases to ≈ 0.619 at the same precision target. F1 is ≈ 0.718. Decision: class weights are not recommended for this model.
+Adding class weights provides no significant benefit.  
+PR-AUC remains at ≈ 0.832 CV, and recall slightly decreases to ≈ 0.619 at the same precision target.  
+F1 stays around ≈ 0.718.  
+**Decision:** class weights are not recommended for this model in the current setup.
 
 ### RandomForestClassifier
-A strong contender with ranking metrics of ROC-AUC ≈ 0.870 CV and PR-AUC ≈ 0.821. At precision ≈ 0.85, it achieves recall ≈ 0.65 and F1 ≈ 0.739. A solid no-tune option with better operating metrics than LogisticRegression.
+A strong contender with ranking metrics of ROC-AUC ≈ 0.870 CV and PR-AUC ≈ 0.821.  
+At precision ≈ 0.85, it achieves recall ≈ 0.652 and F1 ≈ 0.739.  
+A solid **no-tune** option with better operating metrics than LogisticRegression,  
+but still slightly behind the tuned HistGradientBoosting (native) model.
 
 ### HistGradientBoosting (OHE Pipeline)
-This pipeline achieves PR-AUC ≈ 0.835 CV. At precision ≈ 0.85, recall is ≈ 0.61 and F1 ≈ 0.711. However, it introduces extra complexity without clear performance gains over LogisticRegression.
+This pipeline achieves PR-AUC ≈ 0.835 CV.  
+At precision ≈ 0.85, recall is ≈ 0.612 and F1 ≈ 0.711.  
+However, it introduces extra complexity in preprocessing (OHE) without clear performance gains over LogisticRegression or HGB-native.  
+**Decision:** not selected as the final production candidate.
 
-### HistGradientBoosting (Native: OrdinalEncoder + Categorical Features)
-The best overall model with ROC-AUC ≈ 0.873 CV and PR-AUC ≈ 0.854 CV. At precision ≈ 0.85, it achieves recall ≈ 0.667 and F1 ≈ 0.747. Current leader for this task.
+### HistGradientBoosting (Native: OrdinalEncoder + Categorical Features, tuned)
+The best overall model:
+
+- ROC-AUC (CV) ≈ **0.873**
+- PR-AUC (CV) ≈ **0.854–0.856**
+- At the chosen operating point (precision ≈ 0.85),  
+  recall ≈ **0.667** and F1 ≈ **0.747** on OOF predictions.
+
+After **RandomizedSearchCV** (global search) and **local GridSearchCV** (refinement),  
+the final hyperparameters are:
+
+- `learning_rate = 0.05`
+- `max_iter = 150`
+- `max_leaf_nodes = 30`
+- `min_samples_leaf = 21`
+
+This configuration provides the **best trade-off** between ranking quality (PR-AUC),  
+operating metrics (recall/F1 at the target precision), and training time.  
+It is selected as the **current leader** and will be used for final test evaluation and error analysis.
