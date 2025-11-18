@@ -243,13 +243,13 @@ def build_preprocessing_hgb_native(
 
     transformers = []
     if cat_first:
-        # Final order: [cat | num]
+        # [cat | num] in the final matrix
         transformers.append(("cat", cat_pipe, list(cat_cols)))
         transformers.append(("num", "passthrough", list(num_cols)))
         # Categorical features are at positions [0 .. len(cat_cols)-1]
         cat_indices = np.arange(len(cat_cols))
     else:
-        # Final order: [num | cat]
+        # [num | cat] in the final matrix
         transformers.append(("num", "passthrough", list(num_cols)))
         transformers.append(("cat", cat_pipe, list(cat_cols)))
         # Categorical features are at positions [len(num_cols) .. len(num_cols)+len(cat_cols)-1]
@@ -262,44 +262,57 @@ def build_preprocessing_hgb_native(
 
     return preproc, cat_indices
 
-
-def build_preprocessing_hgb_native_with_features(
+def build_preprocessing_hgb_native_with_family(
     num_cols,
     cat_cols,
     cat_first=True,
 ):
     """
-    HGB-native preprocessing WITH extra family-related features.
-
-    Steps:
-    1) Apply add_family_features to the raw DataFrame:
-       - adds 'family_size', 'is_alone', 'is_child' based on 'Age', 'SibSp', 'Parch'.
-    2) Then apply build_preprocessing_hgb_native on an extended numeric list:
-       num_cols + ['family_size', 'is_alone', 'is_child'].
-
+    HGB-native preprocessing WITH extra family features:
+    - Step 1: add_family_features (family_size, is_alone, is_child) to the raw DataFrame.
+    - Step 2: ColumnTransformer:
+        * categorical: OrdinalEncoder
+        * numeric: passthrough for num_cols + new family features
     Returns:
-        preproc: Pipeline(family_features -> ColumnTransformer)
-        cat_indices: np.ndarray (positions of categorical features in the final matrix)
+        preproc: Pipeline([("family", ...), ("ct", ColumnTransformer(...))])
+        cat_indices: indices of categorical features in the final matrix.
     """
-    # Extend numeric columns with new family-related features
+    # 1) Family feature transformer
+    family_transformer = FunctionTransformer(
+        add_family_features,
+        validate=False,
+    )
+
+    # 2) Categorical pipeline (same as in build_preprocessing_hgb_native)
+    cat_pipe = make_cat_pipeline_ordinal()
+
+    # 3) Extend numeric columns with new family features
+    #    These columns will exist AFTER add_family_features() is applied.
     extended_num_cols = list(num_cols) + ["family_size", "is_alone", "is_child"]
 
-    # Base HGB-native ColumnTransformer (cat + extended numeric)
-    base_preproc, cat_indices = build_preprocessing_hgb_native(
-        num_cols=extended_num_cols,
-        cat_cols=cat_cols,
-        cat_first=cat_first,
+    transformers = []
+    if cat_first:
+        # [cat | num] in the final matrix
+        transformers.append(("cat", cat_pipe, list(cat_cols)))
+        transformers.append(("num", "passthrough", extended_num_cols))
+        cat_indices = np.arange(len(cat_cols))
+    else:
+        # [num | cat] in the final matrix
+        transformers.append(("num", "passthrough", extended_num_cols))
+        transformers.append(("cat", cat_pipe, list(cat_cols)))
+        cat_indices = np.arange(len(extended_num_cols),
+                                len(extended_num_cols) + len(cat_cols))
+
+    # 4) ColumnTransformer on top of DataFrame with family features
+    ct = ColumnTransformer(
+        transformers=transformers,
+        remainder="drop",
     )
 
-    # First step: add family-related features to the raw DataFrame
-    family_transformer = FunctionTransformer(add_family_features, validate=False)
-
-    # Full preprocessing pipeline: family features -> column transformer
-    preproc = Pipeline(
-        steps=[
-            ("family", family_transformer),   # adds family_size, is_alone, is_child
-            ("columns", base_preproc),       # applies ordinal encoding + passthrough
-        ]
-    )
+    # 5) Final preprocessing pipeline: add family features -> apply ColumnTransformer
+    preproc = Pipeline([
+        ("family", family_transformer),
+        ("ct", ct),
+    ])
 
     return preproc, cat_indices
