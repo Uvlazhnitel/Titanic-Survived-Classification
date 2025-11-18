@@ -52,11 +52,22 @@ def add_family_features(X):
     - is_child: 1 if age < 18, else 0.
     - family_size: sibsp + parch + 1.
     - is_alone: 1 if family_size == 1, else 0.
+    Column names are assumed to be lowercase: 'age', 'sibsp', 'parch'.
     """
     X = X.copy()
-    X["is_child"] = (X["Age"] < 18).astype(int)
-    X["family_size"] = X["SibSp"].fillna(0) + X["Parch"].fillna(0) + 1
+    
+    # Fill NaNs in sibsp/parch to avoid NaN family_size
+    sibsp = X["Sibsp"].fillna(0)
+    parch = X["Parch"].fillna(0)
+    X["family_size"] = sibsp + parch + 1
+
+    # is_alone: 1 if family_size == 1, else 0
     X["is_alone"] = (X["family_size"] == 1).astype(int)
+
+    # is_child: 1 if age < 18, Age missing -> 0
+    age = X["age"]
+    X["is_child"] = ((age < 18) & age.notna()).astype(int)
+
     return X
 
 
