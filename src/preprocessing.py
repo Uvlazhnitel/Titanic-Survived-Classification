@@ -243,13 +243,13 @@ def build_preprocessing_hgb_native(
 
     transformers = []
     if cat_first:
-        # [cat | num] in the final matrix
+        # Final order: [cat | num]
         transformers.append(("cat", cat_pipe, list(cat_cols)))
         transformers.append(("num", "passthrough", list(num_cols)))
         # Categorical features are at positions [0 .. len(cat_cols)-1]
         cat_indices = np.arange(len(cat_cols))
     else:
-        # [num | cat] in the final matrix
+        # Final order: [num | cat]
         transformers.append(("num", "passthrough", list(num_cols)))
         transformers.append(("cat", cat_pipe, list(cat_cols)))
         # Categorical features are at positions [len(num_cols) .. len(num_cols)+len(cat_cols)-1]
@@ -258,6 +258,48 @@ def build_preprocessing_hgb_native(
     preproc = ColumnTransformer(
         transformers=transformers,
         remainder="drop",
+    )
+
+    return preproc, cat_indices
+
+
+def build_preprocessing_hgb_native_with_features(
+    num_cols,
+    cat_cols,
+    cat_first=True,
+):
+    """
+    HGB-native preprocessing WITH extra family-related features.
+
+    Steps:
+    1) Apply add_family_features to the raw DataFrame:
+       - adds 'family_size', 'is_alone', 'is_child' based on 'Age', 'SibSp', 'Parch'.
+    2) Then apply build_preprocessing_hgb_native on an extended numeric list:
+       num_cols + ['family_size', 'is_alone', 'is_child'].
+
+    Returns:
+        preproc: Pipeline(family_features -> ColumnTransformer)
+        cat_indices: np.ndarray (positions of categorical features in the final matrix)
+    """
+    # Extend numeric columns with new family-related features
+    extended_num_cols = list(num_cols) + ["family_size", "is_alone", "is_child"]
+
+    # Base HGB-native ColumnTransformer (cat + extended numeric)
+    base_preproc, cat_indices = build_preprocessing_hgb_native(
+        num_cols=extended_num_cols,
+        cat_cols=cat_cols,
+        cat_first=cat_first,
+    )
+
+    # First step: add family-related features to the raw DataFrame
+    family_transformer = FunctionTransformer(add_family_features, validate=False)
+
+    # Full preprocessing pipeline: family features -> column transformer
+    preproc = Pipeline(
+        steps=[
+            ("family", family_transformer),   # adds family_size, is_alone, is_child
+            ("columns", base_preproc),       # applies ordinal encoding + passthrough
+        ]
     )
 
     return preproc, cat_indices
