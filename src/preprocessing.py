@@ -46,6 +46,19 @@ def add_ratio(df):
     out["FarePerPerson"] = out["Fare"].fillna(0) / out["FamilySize"]
     return out
 
+def add_family_features(X):
+    """
+    Add family-related features:
+    - is_child: 1 if age < 18, else 0.
+    - family_size: sibsp + parch + 1.
+    - is_alone: 1 if family_size == 1, else 0.
+    """
+    X = X.copy()
+    X["is_child"] = (X["Age"] < 18).astype(int)
+    X["family_size"] = X["SibSp"].fillna(0) + X["Parch"].fillna(0) + 1
+    X["is_alone"] = (X["family_size"] == 1).astype(int)
+    return X
+
 
 # ---------------------------
 # Custom transformer
@@ -201,35 +214,40 @@ def make_cat_pipeline_ordinal():
     ])
 
 
-def build_preprocessing_hgb_native(
+def build_preprocessing_hgb_native_with_features(
     num_cols,
     cat_cols,
+    family_cols=["sibsp", "parch", "age"],
     cat_first=True,
 ):
     """
-    HGB-native preprocessing:
+    HGB-native preprocessing with additional family-related features:
+    - Adds is_child, family_size, and is_alone.
     - Categorical: OrdinalEncoder (1 int-coded column per feature).
     - Numeric: explicit passthrough ONLY for num_cols.
     - All other columns are DROPPED to avoid raw strings leaking in.
     - Output order: [categoricals] + [numerics] -> cat indices are 0..len(cat_cols)-1.
     """
+    # Add family-related features
+    family_transformer = FunctionTransformer(add_family_features, validate=False)
+
+    # Categorical pipeline
     cat_pipe = make_cat_pipeline_ordinal()
 
-    transformers = []
+    # Combine all transformers
+    transformers = [("family", family_transformer, family_cols)]
     if cat_first:
-        # put categoricals first, then numerics
         transformers.append(("cat", cat_pipe, list(cat_cols)))
         transformers.append(("num", "passthrough", list(num_cols)))
         cat_indices = np.arange(len(cat_cols))
     else:
-        # (not recommended) numerics first -> cat indices are offset by the number of numeric columns
         transformers.append(("num", "passthrough", list(num_cols)))
         transformers.append(("cat", cat_pipe, list(cat_cols)))
         cat_indices = np.arange(len(num_cols), len(num_cols) + len(cat_cols))
 
     preproc = ColumnTransformer(
         transformers=transformers,
-        remainder="drop",                
-        verbose_feature_names_out=False
+        remainder="drop",
     )
-    return preproc, cat_indices
+
+    return preproc
