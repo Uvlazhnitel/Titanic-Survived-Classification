@@ -49,7 +49,7 @@ def add_ratio(df):
 def add_family_features(X):
     """
     Add family-related features for Titanic-style data:
-    - is_child: 1 if Age < 18, else 0.
+    - is_child: 1 if Age < 18, else 0. Missing Age values are treated as 0.
     - family_size: SibSp + Parch + 1.
     - is_alone: 1 if family_size == 1, else 0.
 
