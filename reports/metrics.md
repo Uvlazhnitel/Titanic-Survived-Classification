@@ -192,3 +192,22 @@ the final hyperparameters are:
 This configuration provides the **best trade-off** between ranking quality (PR-AUC),  
 operating metrics (recall/F1 at the target precision), and training time.  
 It is selected as the **current leader** and will be used for final test evaluation and error analysis.
+
+### Family-related features (HGB)
+
+Compared HistGradientBoostingClassifier with and without extra family-related features
+(`family_size = SibSp + Parch + 1`, `is_alone`, `is_child`).
+
+5-fold OOF CV (StratifiedKFold, shuffle=True, random_state=42):
+
+- HGB OLD (no family features):
+  - ROC-AUC = 0.873 ± 0.021
+  - PR-AUC  = 0.850 ± 0.023
+
+- HGB NEW (with family_size, is_alone, is_child):
+  - ROC-AUC = 0.878 ± 0.020
+  - PR-AUC  = 0.853 ± 0.025
+
+**Conclusion:**  
+Family-related features give a small positive shift in mean ROC-AUC / PR-AUC, but the improvement is within 1 std of the CV scores.  
+We keep these features in the final pipeline because they are simple and interpretable, but we do not claim a strong, statistically stable gain.

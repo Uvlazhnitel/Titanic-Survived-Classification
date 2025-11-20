@@ -46,6 +46,30 @@ def add_ratio(df):
     out["FarePerPerson"] = out["Fare"].fillna(0) / out["FamilySize"]
     return out
 
+def add_family_features(X):
+    """
+    Add family-related features for Titanic-style data:
+    - is_child: 1 if Age < 18, else 0. Missing Age values are treated as 0.
+    - family_size: SibSp + Parch + 1.
+    - is_alone: 1 if family_size == 1, else 0.
+
+    Expects columns: 'Age', 'SibSp', 'Parch'.
+    """
+    X = X.copy()
+
+    # Fill NaNs in SibSp/Parch to avoid NaN family_size
+    sibsp = X["SibSp"].fillna(0)
+    parch = X["Parch"].fillna(0)
+    X["family_size"] = sibsp + parch + 1
+
+    # is_alone: 1 if family_size == 1, else 0
+    X["is_alone"] = (X["family_size"] == 1).astype(int)
+
+    # is_child: 1 if Age < 18, Age missing -> 0
+    age = X["Age"]
+    X["is_child"] = ((age < 18) & age.notna()).astype(int)
+
+    return X
 
 # ---------------------------
 # Custom transformer
@@ -207,29 +231,88 @@ def build_preprocessing_hgb_native(
     cat_first=True,
 ):
     """
-    HGB-native preprocessing:
-    - Categorical: OrdinalEncoder (1 int-coded column per feature).
-    - Numeric: explicit passthrough ONLY for num_cols.
-    - All other columns are DROPPED to avoid raw strings leaking in.
-    - Output order: [categoricals] + [numerics] -> cat indices are 0..len(cat_cols)-1.
+    HGB-native preprocessing WITHOUT extra family features:
+    - Categorical: OrdinalEncoder (via make_cat_pipeline_ordinal).
+    - Numeric: passthrough.
+    - Returns:
+        preproc: ColumnTransformer
+        cat_indices: np.ndarray with indices of categorical features
+                     in the transformed matrix (for categorical_features=...).
     """
     cat_pipe = make_cat_pipeline_ordinal()
 
     transformers = []
     if cat_first:
-        # put categoricals first, then numerics
+        # [cat | num] in the final matrix
         transformers.append(("cat", cat_pipe, list(cat_cols)))
         transformers.append(("num", "passthrough", list(num_cols)))
+        # Categorical features are at positions [0 .. len(cat_cols)-1]
         cat_indices = np.arange(len(cat_cols))
     else:
-        # (not recommended) numerics first -> cat indices are offset by the number of numeric columns
+        # [num | cat] in the final matrix
         transformers.append(("num", "passthrough", list(num_cols)))
         transformers.append(("cat", cat_pipe, list(cat_cols)))
+        # Categorical features are at positions [len(num_cols) .. len(num_cols)+len(cat_cols)-1]
         cat_indices = np.arange(len(num_cols), len(num_cols) + len(cat_cols))
 
     preproc = ColumnTransformer(
         transformers=transformers,
-        remainder="drop",                
-        verbose_feature_names_out=False
+        remainder="drop",
     )
+
+    return preproc, cat_indices
+
+def build_preprocessing_hgb_native_with_family(
+    num_cols,
+    cat_cols,
+    cat_first=True,
+):
+    """
+    HGB-native preprocessing WITH extra family features:
+    - Step 1: add_family_features (family_size, is_alone, is_child) to the raw DataFrame.
+    - Step 2: ColumnTransformer:
+        * categorical: OrdinalEncoder
+        * numeric: passthrough for num_cols + new family features
+    Returns:
+        preproc: Pipeline([("family", ...), ("ct", ColumnTransformer(...))])
+        cat_indices: indices of categorical features in the final matrix.
+    """
+    # 1) Family feature transformer
+    family_transformer = FunctionTransformer(
+        add_family_features,
+        validate=False,
+    )
+
+    # 2) Categorical pipeline (same as in build_preprocessing_hgb_native)
+    cat_pipe = make_cat_pipeline_ordinal()
+
+    # 3) Extend numeric columns with new family features
+    #    These columns will exist AFTER add_family_features() is applied.
+    extended_num_cols = list(num_cols) + ["family_size", "is_alone", "is_child"]
+
+    transformers = []
+    if cat_first:
+        # [cat | num] in the final matrix
+        transformers.append(("cat", cat_pipe, list(cat_cols)))
+        transformers.append(("num", "passthrough", extended_num_cols))
+        cat_indices = np.arange(len(cat_cols))
+    else:
+        # [num | cat] in the final matrix
+        transformers.append(("num", "passthrough", extended_num_cols))
+        transformers.append(("cat", cat_pipe, list(cat_cols)))
+        cat_indices = np.arange(len(extended_num_cols),
+                                len(extended_num_cols) + len(cat_cols))
+
+    # 4) ColumnTransformer on top of DataFrame with family features
+    ct = ColumnTransformer(
+        transformers=transformers,
+        remainder="drop",
+    )
+
+    # 5) Final preprocessing pipeline: add family features -> apply ColumnTransformer
+    preproc = Pipeline([
+        ("family", family_transformer),
+        ("ct", ct),
+    ])
+
     return preproc, cat_indices
