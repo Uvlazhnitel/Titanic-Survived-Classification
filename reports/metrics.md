@@ -272,3 +272,15 @@ simple family-related features:
 - They are simple and interpretable and help in some family-related FN cases,  
   so we **keep them** in the final pipeline,  
   but do **not** claim a strong, statistically stable gain.
+
+---
+
+## G) Probability calibration (train, OOF)
+
+Calibration metrics are computed on OOF predictions of the final leader
+(HistGB, native categorical). Test set is still untouched.
+
+| Variant                   | Brier Score | PR-AUC (AP) | ROC-AUC | Notes                   |
+|---------------------------|------------:|------------:|--------:|-------------------------|
+| HistGB native (baseline)  |     0.1312  |     0.8481  |  0.8763 | Uncalibrated, OOF, CV=5 |
+
