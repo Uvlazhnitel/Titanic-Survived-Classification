@@ -286,4 +286,16 @@ Calibration metrics are computed on OOF predictions of the final leader
 | HistGB native + Platt (sigmoid) |      0.1300 |      0.8492 |  0.8777 | CalibratedClassifierCV, OOF, CV=5  |
 | HistGB native + Isotonic        |      0.1286 |      0.8419 |  0.8753 | CalibratedClassifierCV, OOF, CV=5  |
 
+### Calibration conclusion
+
+- The baseline HistGB (native categorical) model already provides reasonably well-calibrated probabilities:
+  - Brier ≈ 0.1312, PR-AUC ≈ 0.848, ROC-AUC ≈ 0.876 (OOF, CV=5).
+- Platt (sigmoid) calibration slightly improves Brier (0.1312 → 0.1300) and marginally increases PR-AUC / ROC-AUC.
+  These changes are very small and within typical CV noise.
+- Isotonic calibration further reduces Brier (down to 0.1286), but degrades PR-AUC (0.848 → 0.842) and ROC-AUC.
+- Since the main project focus is ranking quality (PR-AUC and metrics at the chosen precision-oriented threshold),
+  and the baseline model is already well calibrated, **probability calibration is not included in the final pipeline**.
+- If a future use case requires strictly calibrated probabilities (e.g. risk scores used as probabilities),
+  Platt scaling would be a reasonable candidate, but it is **not necessary for the current Titanic setup**.
+
 
