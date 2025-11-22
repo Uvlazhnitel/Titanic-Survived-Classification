@@ -183,7 +183,7 @@ def choose_threshold(probs, y_true, precision_target=0.85):
 
 ---
 
-### Probability calibration
+## 10. Probability Calibration
 
 - I evaluated probability calibration for the final leader (HistGradientBoostingClassifier with native categoricals)
   using `CalibratedClassifierCV` with both **Platt (sigmoid)** and **isotonic** methods on the training set (OOF).
@@ -193,7 +193,7 @@ def choose_threshold(probs, y_true, precision_target=0.85):
   The baseline HistGB probabilities are good enough, and the small gains do not justify extra complexity.
 
 
-## 10. Reproducing Results
+## 11. Reproducing Results
 
 1. Acquire Kaggle dataset; place CSV under `data/raw/`.
 2. Launch Jupyter and open `notebooks/03_metrics_thresholds.ipynb`.
