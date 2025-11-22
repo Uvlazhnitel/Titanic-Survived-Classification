@@ -48,28 +48,7 @@ Train prevalence (positive class ratio): **38.3%**
 
 Future extensions may include engineered features (e.g. family size, fare per person, title extraction); these will be documented as added.
 
----
-
-## 4. Project Structure
-
-```
-data/
-  raw/                       # Original CSV(s)
-notebooks/
-  03_metrics_thresholds.ipynb   # Exploration, CV evaluation, threshold selection
-reports/
-  metrics.md                 # Consolidated model comparison (ranking + operating points)
-  metrics_cv.csv             # Per-fold & aggregate metrics for one run/config variant
-src/
-  preprocessing.py           # build_preprocessing(...) definition
-  (future) train.py          # Planned automated experiment runner
-  (future) evaluate.py       # Planned evaluation script (OOF + test hold-out)
-requirements.txt (planned)
-```
-
----
-
-## 5. Environment & Installation
+## 4. Environment & Installation
 
 ```bash
 python -m venv .venv
@@ -88,7 +67,7 @@ pip install pandas scikit-learn matplotlib
 
 ---
 
-## 6. Preprocessing & Modeling
+## 5. Preprocessing & Modeling
 
 Defined in `src/preprocessing.py`:
 ```python
