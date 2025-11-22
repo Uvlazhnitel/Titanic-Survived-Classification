@@ -183,7 +183,17 @@ def choose_threshold(probs, y_true, precision_target=0.85):
 
 ---
 
-## 10. Reproducing Results
+## 10. Probability Calibration
+
+- I evaluated probability calibration for the final leader (HistGradientBoostingClassifier with native categoricals)
+  using `CalibratedClassifierCV` with both **Platt (sigmoid)** and **isotonic** methods on the training set (OOF).
+- Platt scaling slightly improved Brier score but only marginally changed PR-AUC / ROC-AUC.
+- Isotonic regression provided the lowest Brier score but degraded PR-AUC, which is the main ranking metric in this project.
+- **Decision:** for this project, I do **not** include a separate calibration step in the final pipeline.
+  The baseline HistGB probabilities are good enough, and the small gains do not justify extra complexity.
+
+
+## 11. Reproducing Results
 
 1. Acquire Kaggle dataset; place CSV under `data/raw/`.
 2. Launch Jupyter and open `notebooks/03_metrics_thresholds.ipynb`.
