@@ -280,8 +280,10 @@ simple family-related features:
 Calibration metrics are computed on OOF predictions of the final leader
 (HistGB, native categorical). Test set is still untouched.
 
-| Variant                        | Brier Score | PR-AUC (AP) | ROC-AUC | Notes                              |
-|--------------------------------|------------:|------------:|--------:|------------------------------------|
-| HistGB native (baseline)       |      0.1312 |      0.8481 |  0.8763 | Uncalibrated, OOF, CV=5            |
-| HistGB native + Platt (sigmoid)|      0.1300 |      0.8492 |  0.8777 | CalibratedClassifierCV, OOF, CV=5  |
+| Variant                         | Brier Score | PR-AUC (AP) | ROC-AUC | Notes                              |
+|---------------------------------|------------:|------------:|--------:|------------------------------------|
+| HistGB native (baseline)        |      0.1312 |      0.8481 |  0.8763 | Uncalibrated, OOF, CV=5            |
+| HistGB native + Platt (sigmoid) |      0.1300 |      0.8492 |  0.8777 | CalibratedClassifierCV, OOF, CV=5  |
+| HistGB native + Isotonic        |      0.1286 |      0.8419 |  0.8753 | CalibratedClassifierCV, OOF, CV=5  |
+
 
