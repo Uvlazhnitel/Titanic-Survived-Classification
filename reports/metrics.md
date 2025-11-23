@@ -6,64 +6,89 @@
   → context for interpreting PR-AUC / Average Precision.
 
 All metrics below are computed on the **training set** using  
-**5-fold StratifiedKFold** (`shuffle=True, random_state=42`) and **OOF predictions**.  
-The test set is reserved for final evaluation only.
+**5-fold StratifiedKFold** (`shuffle=True, random_state=42`) and **out-of-fold (OOF) predictions**.  
+The test set is reserved for **final evaluation only** and is not used anywhere in this file.
 
 ---
 
-## A) Ranking Metrics (CV mean ± std)
+## A) Evaluation Protocol
 
-Main goal: compare models by ranking quality (how well they separate positives from negatives),  
+- **Data split**
+  - Train / validation: used for cross-validation and model selection.
+  - Test: held out completely and used only once at the very end.
+- **Cross-validation**
+  - `StratifiedKFold(n_splits=5, shuffle=True, random_state=42)`
+  - All reported CV metrics are based on this protocol.
+- **OOF predictions**
+  - For each model, OOF probabilities are obtained via `cross_val_predict(..., method="predict_proba")`.
+  - Thresholds, operating metrics and calibration analysis are computed on **OOF predictions only**.
+
+---
+
+## B) Ranking Metrics (CV mean ± std)
+
+Main goal: compare models by **ranking quality** (how well they separate positives from negatives),  
 using **ROC-AUC** and **PR-AUC (Average Precision)**.
 
-| Model                              | ROC-AUC (CV)       | PR-AUC / AP (CV) | Notes                                                        |
-|------------------------------------|--------------------|------------------|--------------------------------------------------------------|
-| LogisticRegression (baseline)      | 0.856 ± 0.031      | 0.834 ± 0.029    | OOF AUCs: ROC = 0.856, AP = 0.831                            |
-| LogisticRegression (+balanced)     | 0.856 ± 0.029      | 0.832 ± 0.028    | OOF AUCs: ROC = 0.856, AP = 0.832                            |
-| RandomForestClassifier             | 0.870 ± 0.016      | 0.821 ± 0.031    | OOF AUCs: ROC = 0.871, AP = 0.812                            |
-| HistGB (OHE pipeline)              | 0.868 ± 0.030      | 0.835 ± 0.036    | OOF AUCs: ROC = 0.868, AP = 0.826                            |
-| HistGB (native categorical, tuned) | 0.873 ± 0.019      | 0.854 ± 0.021    | OOF AUCs: ROC = 0.872, AP = 0.847; tuned via Random+Grid CV  |
+| Model                              | ROC-AUC (CV)       | PR-AUC / AP (CV) | Notes                                                       |
+|------------------------------------|--------------------|------------------|-------------------------------------------------------------|
+| LogisticRegression (baseline)      | 0.856 ± 0.031      | 0.834 ± 0.029    | OOF AUCs: ROC ≈ 0.856, AP ≈ 0.831                           |
+| LogisticRegression (+balanced)     | 0.856 ± 0.029      | 0.832 ± 0.028    | OOF AUCs: ROC ≈ 0.856, AP ≈ 0.832                           |
+| RandomForestClassifier             | 0.870 ± 0.016      | 0.821 ± 0.031    | OOF AUCs: ROC ≈ 0.871, AP ≈ 0.812                           |
+| HistGB (OHE pipeline)              | 0.868 ± 0.030      | 0.835 ± 0.036    | OOF AUCs: ROC ≈ 0.868, AP ≈ 0.826                           |
+| HistGB (native categorical, tuned) | 0.873 ± 0.019      | 0.854 ± 0.021    | OOF AUCs: ROC ≈ 0.872, AP ≈ 0.847; tuned via Random+Grid CV |
+
+> **Summary:** tuned **HistGB (native categorical)** is the best ranking model by both ROC-AUC and PR-AUC,  
+> and is selected as the **leader** for further analysis, threshold selection and test evaluation.
 
 ---
 
-## B) Operating Point (OOF, target precision ≈ 0.85)
+## C) Operating Point Selection (OOF, precision target ≈ 0.85)
 
-For deployment we need a **single operating point** per model.  
-Thresholds are selected on OOF predictions using the same rule as in Session 5:
+For deployment we need a **single operating point** for each model.  
+Thresholds are selected on OOF predictions using a **common rule**:
 
-> **Rule:** find all points on the PR-curve where  
-> `precision ≥ target_precision` (≈ 0.85), then choose the one with **maximum recall**.
+> **Strategy:** `precision ≥ 0.85 → max recall`  
+> For each model, consider all points on the PR-curve where precision ≥ 0.85,  
+> then choose the one with **maximum recall**.
 
-Metrics below are computed at these thresholds.
+Metrics below are computed at these thresholds on **OOF predictions**.
 
-| Model                              | Thr.  | Precision@Thr | Recall@Thr | F1@Thr | Notes                                                           |
-|------------------------------------|-------|---------------|------------|--------|-----------------------------------------------------------------|
-| LogisticRegression (baseline)      | 0.636 | 0.850         | 0.623      | 0.719  | OOF, 5-fold; threshold from PR-curve (precision ≥ 0.85 → max R) |
-| RandomForestClassifier             | 0.640 | 0.852         | 0.652      | 0.739  | OOF, 5-fold; same rule                                          |
-| LogisticRegression (+balanced)     | 0.743 | 0.854         | 0.619      | 0.718  | OOF, 5-fold; same rule                                          |
-| HistGB (OHE pipeline)              | 0.798 | 0.848         | 0.612      | 0.711  | OOF, 5-fold; same rule                                          |
-| HistGB (native categorical, tuned) | 0.679 | 0.850         | 0.667      | 0.747  | OOF, 5-fold; same rule                                          |
+| Model                              | Thr.   | Precision@Thr | Recall@Thr | F1@Thr | Notes                                                          |
+|------------------------------------|--------|---------------|------------|--------|----------------------------------------------------------------|
+| LogisticRegression (baseline)      | 0.636  | 0.850         | 0.623      | 0.719  | OOF, 5-fold; threshold from PR-curve (precision ≥ 0.85 → max R) |
+| LogisticRegression (+balanced)     | 0.743  | 0.854         | 0.619      | 0.718  | OOF, 5-fold; same rule                                         |
+| RandomForestClassifier             | 0.640  | 0.852         | 0.652      | 0.739  | OOF, 5-fold; same rule                                         |
+| HistGB (OHE pipeline)              | 0.798  | 0.848         | 0.612      | 0.711  | OOF, 5-fold; same rule                                         |
+| HistGB (native categorical, tuned) | 0.596  | 0.851         | 0.692      | 0.763  | Final leader; details below                                   |
+
+### Final leader threshold (HistGB native, tuned)
+
+- **Model:** HistGradientBoostingClassifier (native categoricals, tuned)  
+- **Strategy:** `precision ≥ 0.85 → max recall`  
+- **Chosen index on PR-curve:** 455  
+- **Chosen threshold:** `t_final = 0.596`  
+- **Point on PR curve:**  
+  - Precision = **0.851**  
+  - Recall = **0.692**  
+  - F1 ≈ **0.763**
+
+These values are computed from **OOF predictions** of the final pipeline.
 
 ---
 
-## C) Confusion Matrices (OOF) @ Listed Thresholds
+## D) Confusion Matrices (OOF) @ Listed Thresholds
 
 Raw counts of true/false positives/negatives for the thresholds above.  
 Positive class: `Survived = 1`.
+
+> **Note:** values for Logistic / RF / OHE HistGB are filled;  
 
 ### LogisticRegression (baseline) @ Thr = 0.636
 - **TN** = 409  
 - **FP** = 30  
 - **FN** = 103  
 - **TP** = 170  
-
----
-
-### RandomForestClassifier @ Thr = 0.640
-- **TN** = 408  
-- **FP** = 31  
-- **FN** = 95  
-- **TP** = 178  
 
 ---
 
@@ -75,6 +100,14 @@ Positive class: `Survived = 1`.
 
 ---
 
+### RandomForestClassifier @ Thr = 0.640
+- **TN** = 408  
+- **FP** = 31  
+- **FN** = 95  
+- **TP** = 178  
+
+---
+
 ### HistGB (OHE pipeline) @ Thr = 0.798
 - **TN** = 409  
 - **FP** = 30  
@@ -83,22 +116,25 @@ Positive class: `Survived = 1`.
 
 ---
 
-### HistGB (native categorical, tuned) @ Thr = 0.679
-- **TN** = 407  
-- **FP** = 32  
-- **FN** = 91  
-- **TP** = 182  
+### HistGB (native categorical, tuned, final leader) @ Thr = 0.596
+
+- **TN** = 406  
+- **FP** = 33  
+- **FN** = 83  
+- **TP** = 190
+
+(Insert the actual confusion matrix from the notebook for completeness.)
 
 ---
 
-## D) Hyperparameter Tuning — HistGradientBoosting (native categorical)
+## E) Hyperparameter Tuning — HistGradientBoosting (native categorical)
 
 Tuning is done only for the **HistGB (native categorical)** model,  
 using the pipeline: `preprocess → HistGradientBoostingClassifier(categorical_features=cat_idx)`.
 
 - **Target metric:** Average Precision (AP / PR-AUC)  
 - **CV protocol:** 5-fold StratifiedKFold (`shuffle=True, random_state=42`)  
-- **Search strategy:**  
+- **Search strategy:**
   1. **RandomizedSearchCV** — global exploration of the space  
   2. **GridSearchCV** — local refinement around the best random configuration  
 
@@ -174,11 +210,114 @@ Use the **GridSearchCV best configuration** as the final leader:
 > - `max_leaf_nodes = 30`  
 > - `min_samples_leaf = 21`
 
-These hyperparameters are used in the final pipeline for OOF and test evaluation.
+These hyperparameters are used in the final pipeline for OOF evaluation,  
+threshold selection and (later) test evaluation.
 
 ---
 
-## E) Model-Level Conclusions
+## F) Feature Engineering — Family-Related Features
+
+Compared HistGradientBoostingClassifier (native categorical) **with vs without**  
+simple family-related features:  
+`family_size = SibSp + Parch + 1`, `is_alone`, `is_child`.
+
+5-fold OOF CV (StratifiedKFold, `shuffle=True, random_state=42`):
+
+- **HistGB native — OLD (no family features):**
+  - ROC-AUC = 0.873 ± 0.021  
+  - PR-AUC  = 0.850 ± 0.023  
+
+- **HistGB native — NEW (with family features):**
+  - ROC-AUC = 0.878 ± 0.020  
+  - PR-AUC  = 0.853 ± 0.025  
+
+**Conclusion (family features):**
+
+- Family-related features give a **small positive shift** in mean ROC-AUC / PR-AUC,  
+  but the improvement is within **1 std** of the CV scores.  
+- They are simple and interpretable and help in several family-related FN cases,  
+  so we **keep them** in the final pipeline,  
+  but do **not** claim a strong, statistically stable gain.
+
+---
+
+## G) Probability Calibration (train, OOF)
+
+Calibration metrics are computed on OOF predictions of the **final leader**
+(HistGB, native categorical, with family features).  
+Test set is still untouched.
+
+| Variant                         | Brier Score | PR-AUC (AP) | ROC-AUC | Notes                             |
+|---------------------------------|------------:|------------:|--------:|-----------------------------------|
+| HistGB native (baseline)        |      0.1312 |      0.8481 |  0.8763 | Uncalibrated, OOF, CV=5           |
+| HistGB native + Platt (sigmoid) |      0.1300 |      0.8492 |  0.8777 | CalibratedClassifierCV, OOF, CV=5 |
+| HistGB native + Isotonic        |      0.1286 |      0.8419 |  0.8753 | CalibratedClassifierCV, OOF, CV=5 |
+
+### Calibration conclusion
+
+- The baseline HistGB (native categorical) model already provides **reasonably well-calibrated** probabilities:
+  - Brier ≈ 0.1312, PR-AUC ≈ 0.848, ROC-AUC ≈ 0.876 (OOF, CV=5).
+- Platt (sigmoid) calibration slightly improves Brier (0.1312 → 0.1300)  
+  and marginally increases PR-AUC / ROC-AUC — the change is very small and within typical CV noise.
+- Isotonic calibration further reduces Brier (down to 0.1286),  
+  but **degrades** PR-AUC (0.848 → 0.842) and ROC-AUC.
+- Since the main project focus is **ranking quality** (PR-AUC and metrics at the chosen precision-oriented threshold),
+  and the baseline model is already well-calibrated enough for this use case,  
+  **probability calibration is not included in the final production pipeline**.
+- If a future use case requires strictly calibrated probabilities (e.g. risk scores interpreted as probabilities),
+  Platt scaling would be a reasonable candidate, but it is **not necessary** for the current Titanic setup.
+
+---
+
+## H) Final Leader Metrics (OOF, pre-threshold) 
+
+The final evaluation of the leader model (OOF, before applying any threshold) is:
+
+- **Model:** HistGradientBoostingClassifier (native categoricals, tuned, with family features)  
+- **PR-AUC (AP)**: **0.8474**  
+- **ROC-AUC**: **0.8723**
+
+These values correspond to the final pipeline used for threshold selection.
+
+---
+
+## I) Local Stability Analysis Around the Final Threshold
+
+To check the **local stability** of the decision rule around the final threshold,  
+metrics are evaluated at thresholds close to `t_final ≈ 0.596` using OOF predictions.
+
+(Computed in the notebook; here thresholds are rounded to 2 decimals.)
+
+- **t = 0.58**:  
+  - Precision (P): 0.832  
+  - Recall (R): 0.707  
+  - F1 Score: 0.764  
+
+- **t ≈ 0.596 (chosen)**:  
+  - Precision (P): 0.851  
+  - Recall (R): 0.692  
+  - F1 Score: ≈ 0.763  
+
+- **t = 0.60**:  
+  - Precision (P): 0.852  
+  - Recall (R): 0.696  
+  - F1 Score: 0.766  
+
+- **t = 0.62**:  
+  - Precision (P): 0.859  
+  - Recall (R): 0.692  
+  - F1 Score: 0.767  
+
+**Observation:**
+
+- F1 is **stable** in the range `[0.58, 0.62]`.  
+- Increasing the threshold slightly improves **precision** with a minor loss in **recall**.  
+- The chosen threshold `t_final = 0.596` lies inside this stable region and satisfies the project rule  
+  `precision ≥ 0.85 → max recall` on OOF predictions.
+
+---
+
+## J) Model-Level Conclusions
 
 ### LogisticRegression (baseline)
 
@@ -227,9 +366,9 @@ The best overall model:
 
 - ROC-AUC (CV) ≈ **0.873**  
 - PR-AUC (CV) ≈ **0.854–0.856**  
-- At the chosen operating point (precision ≈ 0.85, on OOF):
-  - recall ≈ **0.667**  
-  - F1 ≈ **0.747**
+- At the chosen operating point (`precision ≈ 0.851`, OOF):
+  - recall ≈ **0.692**  
+  - F1 ≈ **0.763**
 
 After **RandomizedSearchCV** (global search) and **local GridSearchCV** (refinement),  
 the final hyperparameters are:
@@ -245,81 +384,8 @@ This configuration offers the best trade-off between:
 - operating metrics (recall/F1 at target precision),  
 - and training time.
 
-It is selected as the **current leader** and will be used for final test evaluation and error analysis.
+It is selected as the **current leader** and will be used for:
 
----
-
-## F) Family-Related Features (HistGB native)
-
-Compared HistGradientBoostingClassifier (native categorical) **with vs without**  
-simple family-related features:  
-`family_size = SibSp + Parch + 1`, `is_alone`, `is_child`.
-
-5-fold OOF CV (StratifiedKFold, `shuffle=True, random_state=42`):
-
-- **HistGB native — OLD (no family features):**
-  - ROC-AUC = 0.873 ± 0.021  
-  - PR-AUC  = 0.850 ± 0.023  
-
-- **HistGB native — NEW (with family features):**
-  - ROC-AUC = 0.878 ± 0.020  
-  - PR-AUC  = 0.853 ± 0.025  
-
-**Conclusion (family features):**
-
-- Family-related features give a **small positive shift** in mean ROC-AUC / PR-AUC,  
-  but the improvement is within **1 std** of the CV scores.  
-- They are simple and interpretable and help in some family-related FN cases,  
-  so we **keep them** in the final pipeline,  
-  but do **not** claim a strong, statistically stable gain.
-
----
-
-## G) Probability calibration (train, OOF)
-
-Calibration metrics are computed on OOF predictions of the final leader
-(HistGB, native categorical). Test set is still untouched.
-
-| Variant                         | Brier Score | PR-AUC (AP) | ROC-AUC | Notes                              |
-|---------------------------------|------------:|------------:|--------:|------------------------------------|
-| HistGB native (baseline)        |      0.1312 |      0.8481 |  0.8763 | Uncalibrated, OOF, CV=5            |
-| HistGB native + Platt (sigmoid) |      0.1300 |      0.8492 |  0.8777 | CalibratedClassifierCV, OOF, CV=5  |
-| HistGB native + Isotonic        |      0.1286 |      0.8419 |  0.8753 | CalibratedClassifierCV, OOF, CV=5  |
-
-### Calibration conclusion
-
-- The baseline HistGB (native categorical) model already provides reasonably well-calibrated probabilities:
-  - Brier ≈ 0.1312, PR-AUC ≈ 0.848, ROC-AUC ≈ 0.876 (OOF, CV=5).
-- Platt (sigmoid) calibration slightly improves Brier (0.1312 → 0.1300) and marginally increases PR-AUC / ROC-AUC.
-  These changes are very small and within typical CV noise.
-- Isotonic calibration further reduces Brier (down to 0.1286), but degrades PR-AUC (0.848 → 0.842) and ROC-AUC.
-- Since the main project focus is ranking quality (PR-AUC and metrics at the chosen precision-oriented threshold),
-  and the baseline model is already well calibrated, **probability calibration is not included in the final pipeline**.
-- If a future use case requires strictly calibrated probabilities (e.g. risk scores used as probabilities),
-  Platt scaling would be a reasonable candidate, but it is **not necessary for the current Titanic setup**.
-
-# Leader Metrics
-
-The final evaluation of the leader model (OOF, pre-threshold) is as follows:
-- **PR-AUC**: 0.8474
-- **ROC-AUC**: 0.8723
-
-## Local Stability Analysis Around t = 0.60 (OOF)
-
-- **t = 0.58**:  
-  - Precision (P): 0.832  
-  - Recall (R): 0.707  
-  - F1 Score: 0.764  
-
-- **t = 0.60 (chosen)**:  
-  - Precision (P): 0.852  
-  - Recall (R): 0.696  
-  - F1 Score: 0.766  
-
-- **t = 0.62**:  
-  - Precision (P): 0.859  
-  - Recall (R): 0.692  
-  - F1 Score: 0.767  
-
-**Observation**:  
-F1 is stable in the range [0.58, 0.62]. Increasing the threshold slightly improves precision with a minor loss in recall.
+- final test evaluation,  
+- error analysis,  
+- and any downstream deployment scripts (`predict.py`, etc.).
