@@ -304,3 +304,22 @@ The final evaluation of the leader model (OOF, pre-threshold) is as follows:
 - **PR-AUC**: 0.8474
 - **ROC-AUC**: 0.8723
 
+## Local Stability Analysis Around t = 0.60 (OOF)
+
+- **t = 0.58**:  
+  - Precision (P): 0.832  
+  - Recall (R): 0.707  
+  - F1 Score: 0.764  
+
+- **t = 0.60 (chosen)**:  
+  - Precision (P): 0.852  
+  - Recall (R): 0.696  
+  - F1 Score: 0.766  
+
+- **t = 0.62**:  
+  - Precision (P): 0.859  
+  - Recall (R): 0.692  
+  - F1 Score: 0.767  
+
+**Observation**:  
+F1 is stable in the range [0.58, 0.62]. Increasing the threshold slightly improves precision with a minor loss in recall.
