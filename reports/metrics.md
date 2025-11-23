@@ -298,4 +298,9 @@ Calibration metrics are computed on OOF predictions of the final leader
 - If a future use case requires strictly calibrated probabilities (e.g. risk scores used as probabilities),
   Platt scaling would be a reasonable candidate, but it is **not necessary for the current Titanic setup**.
 
+# Leader Metrics
+
+The final evaluation of the leader model (OOF, pre-threshold) is as follows:
+- **PR-AUC**: 0.8474
+- **ROC-AUC**: 0.8723
 
