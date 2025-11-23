@@ -82,7 +82,7 @@ These values are computed from **OOF predictions** of the final pipeline.
 Raw counts of true/false positives/negatives for the thresholds above.  
 Positive class: `Survived = 1`.
 
-> **Note:** values for Logistic / RF / OHE HistGB are filled;  
+> **Note:** values for Logistic / RF / OHE HistGB are filled from previous analysis.  
 
 ### LogisticRegression (baseline) @ Thr = 0.636
 - **TN** = 409  
@@ -123,8 +123,6 @@ Positive class: `Survived = 1`.
 - **FN** = 83  
 - **TP** = 190
 
-(Insert the actual confusion matrix from the notebook for completeness.)
-
 ---
 
 ## E) Hyperparameter Tuning — HistGradientBoosting (native categorical)
@@ -134,7 +132,7 @@ using the pipeline: `preprocess → HistGradientBoostingClassifier(categorical_f
 
 - **Target metric:** Average Precision (AP / PR-AUC)  
 - **CV protocol:** 5-fold StratifiedKFold (`shuffle=True, random_state=42`)  
-- **Search strategy:**
+- **Search strategy:**  
   1. **RandomizedSearchCV** — global exploration of the space  
   2. **GridSearchCV** — local refinement around the best random configuration  
 
@@ -235,7 +233,7 @@ simple family-related features:
 
 - Family-related features give a **small positive shift** in mean ROC-AUC / PR-AUC,  
   but the improvement is within **1 std** of the CV scores.  
-- They are simple and interpretable and help in several family-related FN cases,  
+- They are simple and interpretable and help in some family-related FN cases,  
   so we **keep them** in the final pipeline,  
   but do **not** claim a strong, statistically stable gain.
 
