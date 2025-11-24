@@ -280,3 +280,79 @@ The native HGB model currently offers the best balance between ranking quality a
 - **ROC Curve (Test Set):** ![ROC Test](reports/figures/roc_test.png)
 - **Precision-Recall Curve (Out-of-Fold):** ![PR OOF](reports/figures/pr_oof_leader_train.png)
 - **Precision-Recall Curve (Test Set):** ![PR Test](reports/figures/pr_test.png)
+
+
+## Final Results & Summary
+
+**Task.** Binary classification of Titanic passenger survival using the Kaggle Titanic dataset.
+
+**Final model.** HistGradientBoostingClassifier (native categorical handling) with simple family-related features and tuned hyperparameters:
+
+- `learning_rate = 0.05`
+- `max_iter = 150`
+- `max_leaf_nodes = 30`
+- `min_samples_leaf = 21`
+
+**Validation protocol.**
+
+- Stratified train/test split (20% held-out test).
+- 5-fold `StratifiedKFold(n_splits=5, shuffle=True, random_state=42)` on the train set.
+- Out-of-fold (OOF) probabilities used for model selection, threshold tuning and calibration analysis.
+- Decision threshold chosen on OOF via the rule  
+  **“among thresholds with precision ≥ 0.85, pick the one with maximum recall”**,  
+  which yields the final threshold `t_final = 0.596`.
+
+---
+
+### OOF performance (train, CV=5)
+
+Using OOF probabilities of the final pipeline:
+
+- **ROC-AUC:** 0.8723  
+- **PR-AUC / Average Precision:** 0.8474  
+
+At the final threshold `t = 0.596`:
+
+- **Precision:** 0.8510  
+- **Recall:** 0.6920  
+- **F1-score:** 0.7630  
+
+These values are computed strictly on OOF predictions (no test leakage).
+
+---
+
+### Held-out test performance
+
+Evaluated exactly once on the held-out test set, using the frozen pipeline and the fixed threshold `t = 0.596`:
+
+- **ROC-AUC (test):** 0.8252  
+- **PR-AUC / Average Precision (test):** 0.7957  
+- **Brier score (test):** 0.1560  
+
+At `t = 0.596` on the test set:
+
+- **Precision:** 0.7895  
+- **Recall:** 0.6522  
+- **F1-score:** 0.7143  
+- **Accuracy:** 0.7989  
+
+Confusion matrix (test, positive class `Survived = 1`):
+
+- **TN = 98**, **FP = 12**  
+- **FN = 24**, **TP = 45**
+
+---
+
+### Generalization & interpretation
+
+- All test metrics are lower than the OOF metrics, but the gaps are moderate and consistent with the dataset size and the chosen protocol.
+- The model maintains reasonably high precision (~0.79) at the chosen operating point while recovering ~65% of positives.
+- There are no obvious signs of severe overfitting; performance on the held-out test set is a realistic estimate of how this pipeline would behave on future data drawn from the same distribution.
+
+---
+
+### Takeaways
+
+- Tree-based gradient boosting with native categorical support and light feature engineering outperforms logistic regression baselines in both ranking metrics (ROC-AUC, PR-AUC) and F1 at the high-precision operating point.
+  
+**P1 status:** completed (end-to-end workflow from raw CSV to reproducible CV and single-shot test evaluation).
