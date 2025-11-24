@@ -260,12 +260,6 @@ Data from Kaggle Titanic competition is subject to Kaggle’s terms of use. Do n
 
 ---
 
-### Model Snapshot Summary
-
-The native HGB model currently offers the best balance between ranking quality and recall at the high precision target. Continued feature engineering and calibration may further improve reliability at deployment thresholds.
-
----
-
 Feel free to open issues for clarification, enhancements, or additional benchmarking requests.
 
 ---
