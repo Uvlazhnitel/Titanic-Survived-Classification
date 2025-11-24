@@ -276,7 +276,7 @@ The native HGB model currently offers the best balance between ranking quality a
 
 #### Key Visualizations
 
-- **ROC Curve (Out-of-Fold):** ![ROC OOF](reports/figures/roc_oof.png)
+- **ROC Curve (Out-of-Fold):** ![ROC OOF](reports/figures/roc_oof_leader_train.png)
 - **ROC Curve (Test Set):** ![ROC Test](reports/figures/roc_test.png)
-- **Precision-Recall Curve (Out-of-Fold):** ![PR OOF](reports/figures/precision_vs_threshold_oof_leader.png.png)
+- **Precision-Recall Curve (Out-of-Fold):** ![PR OOF](reports/figures/pr_oof_leader_train.png)
 - **Precision-Recall Curve (Test Set):** ![PR Test](reports/figures/pr_test.png)
