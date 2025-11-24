@@ -267,3 +267,16 @@ The native HGB model currently offers the best balance between ranking quality a
 ---
 
 Feel free to open issues for clarification, enhancements, or additional benchmarking requests.
+
+---
+
+### Model Snapshot Summary
+
+The native HGB model currently offers the best balance between ranking quality and recall at the high precision target. Continued feature engineering and calibration may further improve reliability at deployment thresholds.
+
+#### Key Visualizations
+
+- **ROC Curve (Out-of-Fold):** ![ROC OOF](reports/figures/roc_oof.png)
+- **ROC Curve (Test Set):** ![ROC Test](reports/figures/roc_test.png)
+- **Precision-Recall Curve (Out-of-Fold):** ![PR OOF](reports/figures/precision_vs_threshold_oof_leader.png.png)
+- **Precision-Recall Curve (Test Set):** ![PR Test](reports/figures/pr_test.png)
