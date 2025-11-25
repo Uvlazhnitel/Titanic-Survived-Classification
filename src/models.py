@@ -1,20 +1,22 @@
 from __future__ import annotations
+
 from sklearn.pipeline import Pipeline
 from sklearn.ensemble import HistGradientBoostingClassifier
+
 from .preprocessing import build_leader_preprocessing
 
 RANDOM_STATE = 42
 
-NUM_COLS = ["Age", "SibSp", "Parch", "Fare"]
-CAT_COLS = ["Sex", "Pclass", "Embarked"]
 
 def build_pipeline() -> Pipeline:
+    """
+    Build the final leader pipeline:
+    - preprocessing: HGB-native with family features
+    - model: tuned HistGradientBoostingClassifier with categorical_features
+    """
 
-    preprocessing = build_leader_preprocessing(
-        num_cols=NUM_COLS,
-        cat_cols=CAT_COLS,
-        remainder="drop",
-    )
+    # build_leader_preprocessing returns (preproc, cat_indices)
+    preproc, cat_indices = build_leader_preprocessing()
 
     hgb = HistGradientBoostingClassifier(
         learning_rate=0.05,
@@ -22,12 +24,13 @@ def build_pipeline() -> Pipeline:
         max_leaf_nodes=30,
         min_samples_leaf=21,
         random_state=RANDOM_STATE,
+        categorical_features=cat_indices,
     )
 
     pipeline = Pipeline(
         steps=[
-            ("preprocess", preprocessing),
+            ("preprocess", preproc),
             ("model", hgb),
         ]
     )
-
+    return pipeline
