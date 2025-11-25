@@ -207,11 +207,3 @@ def build_baseline_preprocessing(num_cols, cat_cols, remainder="drop"):
         verbose_feature_names_out=True,
     )
     return preproc
-
-
-# ============================================================
-# Legacy / experimental code (optional to keep)
-# ============================================================
-
-# Here you can leave log_fare_only, add_ratio, ClusterSimilarity, etc.,
-# or move them to another module if they are only used in scratch notebooks.
