@@ -136,6 +136,42 @@ def build_leader_preprocessing(
         cat_first=cat_first,
     )
 
+# ---------------------------
+# HGB-native (no family)
+# ---------------------------
+
+def build_preprocessing_hgb_native(
+    num_cols,
+    cat_cols,
+    cat_first=True,
+):
+    """
+    HGB-native preprocessing WITHOUT family-related features.
+    Numeric: passthrough.
+    Categorical: OrdinalEncoder.
+    Returns:
+        preproc: ColumnTransformer
+        cat_indices: np.ndarray with indices of categorical features.
+    """
+    cat_pipe = make_cat_pipeline_ordinal()
+
+    transformers = []
+    if cat_first:
+        transformers.append(("cat", cat_pipe, list(cat_cols)))
+        transformers.append(("num", "passthrough", list(num_cols)))
+        cat_indices = np.arange(len(cat_cols))
+    else:
+        transformers.append(("num", "passthrough", list(num_cols)))
+        transformers.append(("cat", cat_pipe, list(cat_cols)))
+        cat_indices = np.arange(len(num_cols), len(num_cols) + len(cat_cols))
+
+    preproc = ColumnTransformer(
+        transformers=transformers,
+        remainder="drop",
+    )
+
+    return preproc, cat_indices
+
 
 # ============================================================
 # (Optional) Baseline preprocessing for other models
