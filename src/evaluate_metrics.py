@@ -9,14 +9,14 @@ from sklearn.metrics import (
     roc_auc_score,
 )
 
-def evaluate_metrics(oof_proba: np.ndarray, chosen_thr: float, y_train: np.ndarray) -> Dict[str, float]:
+def evaluate_metrics(oof_proba: np.ndarray, chosen_thr: float, y_true: np.ndarray) -> Dict[str, float]:
     """
     Evaluate classification metrics based on out-of-fold (OOF) predictions and a chosen threshold.
 
     Parameters:
     - oof_proba (np.ndarray): Predicted probabilities for the positive class (shape: [n_samples]).
     - chosen_thr (float): Threshold for converting probabilities into class predictions.
-    - y_train (np.ndarray): True labels for the training data (shape: [n_samples]).
+    - y_true (np.ndarray): True labels (shape: [n_samples]).
 
     Returns:
     - metrics (Dict[str, float]): A dictionary containing the confusion matrix, precision, recall, F1 score,
@@ -26,14 +26,14 @@ def evaluate_metrics(oof_proba: np.ndarray, chosen_thr: float, y_train: np.ndarr
     oof_pred = (oof_proba >= chosen_thr).astype(int)
 
     # Compute evaluation metrics
-    cm = confusion_matrix(y_train, oof_pred)
-    prec_at = precision_score(y_train, oof_pred, zero_division=0)
-    rec_at = recall_score(y_train, oof_pred, zero_division=0)
-    f1_at = f1_score(y_train, oof_pred, zero_division=0)
+    cm = confusion_matrix(y_true, oof_pred)
+    prec_at = precision_score(y_true, oof_pred, zero_division=0)
+    rec_at = recall_score(y_true, oof_pred, zero_division=0)
+    f1_at = f1_score(y_true, oof_pred, zero_division=0)
 
     # Compute AUC metrics
-    ap_oof = average_precision_score(y_train, oof_proba)  # PR-AUC (AP)
-    roc_oof = roc_auc_score(y_train, oof_proba)          # ROC-AUC
+    ap_oof = average_precision_score(y_true, oof_proba)  # PR-AUC (AP)
+    roc_oof = roc_auc_score(y_true, oof_proba)          # ROC-AUC
 
     # Print metrics for clarity
     print("Confusion matrix @thr:\n", cm)

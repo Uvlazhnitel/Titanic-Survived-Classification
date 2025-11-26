@@ -1,17 +1,25 @@
 from sklearn.metrics import precision_score, recall_score, f1_score
 import numpy as np
 
-def choose_threshold(oof_proba, y_train, precision, recall, thresholds, target_precision=0.85):
+
+def choose_threshold(
+    oof_proba: np.ndarray,
+    y_train: np.ndarray,
+    precision: np.ndarray,
+    recall: np.ndarray,
+    thresholds: np.ndarray,
+    target_precision: float = 0.85
+) -> tuple[float, str, dict]:
     """
     Choose the best threshold based on the target precision and maximize recall.
     If the target precision is unattainable, fallback to the threshold that maximizes F1 score.
 
     Parameters:
-    - oof_proba: np.array, predicted probabilities for the positive class
-    - y_train: np.array, true labels
-    - precision: np.array, precision values corresponding to thresholds
-    - recall: np.array, recall values corresponding to thresholds
-    - thresholds: np.array, thresholds used to compute precision and recall
+    - oof_proba: np.ndarray, predicted probabilities for the positive class
+    - y_train: np.ndarray, true labels
+    - precision: np.ndarray, precision values corresponding to thresholds
+    - recall: np.ndarray, recall values corresponding to thresholds
+    - thresholds: np.ndarray, thresholds used to compute precision and recall
     - target_precision: float, the target precision value
 
     Returns:
