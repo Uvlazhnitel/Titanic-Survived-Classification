@@ -7,16 +7,16 @@ from sklearn.model_selection import train_test_split
 from src.models import build_pipeline as build_leader_pipeline, RANDOM_STATE
 
 def load_train_data(csv_path: Path) -> tuple[pd.DataFrame, pd.Series]:
-    """Load raw Titanic data and return X_train, y_train using the same split protocol."""
+    """Load raw Titanic data and return X_train, y_train using the same train/test split as the notebooks (80/20 stratified split with random_state=42)."""
     df = pd.read_csv(csv_path)
 
-    # Adjust column names if needed
+    # Define the target column name
     target_col = "Survived"
 
     X = df.drop(columns=[target_col])
     y = df[target_col]
 
-    X_train, X_test, y_train, y_test = train_test_split(
+    X_train, _, y_train, _ = train_test_split(
         X,
         y,
         test_size=0.2,
@@ -32,8 +32,8 @@ def main() -> None:
     parser.add_argument(
         "--data-path",
         type=Path,
-        default=Path("../data/raw/Titanic-Dataset.csv"),
-        help="Path to the raw Titanic CSV file.",
+        default=(Path(__file__).parent.parent / "data" / "raw" / "Titanic-Dataset.csv"),
+        help="Path to the raw Titanic CSV file. Default is relative to project root.",
     )
     parser.add_argument(
         "--output-dir",
