@@ -18,7 +18,7 @@ set_config(transform_output="pandas")
 def add_family_features(X):
     """
     Add family-related features for Titanic-style data:
-    - is_child: 1 if Age < 18, else 0 (missing Age -> 0).
+    - is_child: 1 if Age < 18 and Age is not missing, else 0.
     - family_size: SibSp + Parch + 1.
     - is_alone: 1 if family_size == 1, else 0.
 

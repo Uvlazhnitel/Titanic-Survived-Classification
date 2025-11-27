@@ -14,6 +14,11 @@ def choose_threshold(oof_proba, y_train, precision, recall, thresholds, target_p
     - thresholds: np.array, thresholds used to compute precision and recall
     - target_precision: float, the target precision value
 
+    Note:
+    The `precision`, `recall`, and `thresholds` parameters should be obtained from
+    `sklearn.metrics.precision_recall_curve(y_true, y_score)`, where `y_true` are the true labels
+    and `y_score` are the predicted probabilities for the positive class.
+
     Returns:
     - chosen_thr: float, the chosen threshold
     - strategy: str, the strategy used to choose the threshold
@@ -32,7 +37,7 @@ def choose_threshold(oof_proba, y_train, precision, recall, thresholds, target_p
         # Fallback: choose threshold that maximizes F1 (ignore i=0)
         f1_curve = 2 * (precision * recall) / (precision + recall + 1e-12)
         valid = np.arange(1, len(precision))  # Ignore i=0
-        chosen_idx = valid[np.nanargmax(f1_curve[valid])]
+        chosen_idx = valid[np.argmax(f1_curve[valid])]
         chosen_thr = thresholds[chosen_idx - 1]
         strategy = f"max F1 (target precision {target_precision:.2f} unattainable on OOF)"
 
