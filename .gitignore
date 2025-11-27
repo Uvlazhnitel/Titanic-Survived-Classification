@@ -80,6 +80,7 @@ reports/figures/**
 reports/*.html
 reports/*.pdf
 !reports/metrics.md
+reports/test_predictions.csv
 !reports/metrics.csv
 !reports/README.md
 
@@ -98,3 +99,4 @@ checkpoints/
 *.local
 *.cfg.local
 *.yaml.local
+

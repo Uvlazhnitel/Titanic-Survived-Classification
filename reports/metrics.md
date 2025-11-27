@@ -9,19 +9,30 @@ All metrics below are computed on the **training set** using
 **5-fold StratifiedKFold** (`shuffle=True, random_state=42`) and **out-of-fold (OOF) predictions**.  
 The test set is reserved for **final evaluation only** and is not used anywhere in this file.
 
+Key artifacts:
+
+- `reports/metrics_cv.csv` — per-model CV metrics (ROC-AUC, PR-AUC).  
+- `reports/train_oof_leader.csv` — OOF probabilities of the final leader model.  
+- `reports/threshold_metrics_oof.csv` — sweep of metrics vs threshold for the leader.  
+- `reports/tuning/cv_results_hgb_random.csv` — raw RandomizedSearchCV results.  
+- `reports/tuning/cv_results_hgb_grid.csv` — raw GridSearchCV results.  
+- `reports/worst_cases_top10.csv` — top-10 hardest OOF cases for error analysis.  
+- `reports/threshold.npy` — final deployment threshold for the leader (scalar `t_final`).
+
 ---
 
 ## A) Evaluation Protocol
 
 - **Data split**
   - Train / validation: used for cross-validation and model selection.
-  - Test: held out completely and used only once at the very end.
+  - Test: held out completely and used only once at the very end (see `reports/test_metrics.md`).
 - **Cross-validation**
-  - `StratifiedKFold(n_splits=5, shuffle=True, random_state=42)`
+  - `StratifiedKFold(n_splits=5, shuffle=True, random_state=42)`.
   - All reported CV metrics are based on this protocol.
 - **OOF predictions**
   - For each model, OOF probabilities are obtained via `cross_val_predict(..., method="predict_proba")`.
-  - Thresholds, operating metrics and calibration analysis are computed on **OOF predictions only**.
+  - Thresholds, operating metrics, calibration analysis and error analysis are computed on **OOF predictions only**.
+  - OOF probabilities for the final leader are stored in `reports/train_oof_leader.csv`.
 
 ---
 
@@ -60,20 +71,24 @@ Metrics below are computed at these thresholds on **OOF predictions**.
 | LogisticRegression (+balanced)     | 0.743  | 0.854         | 0.619      | 0.718  | OOF, 5-fold; same rule                                         |
 | RandomForestClassifier             | 0.640  | 0.852         | 0.652      | 0.739  | OOF, 5-fold; same rule                                         |
 | HistGB (OHE pipeline)              | 0.798  | 0.848         | 0.612      | 0.711  | OOF, 5-fold; same rule                                         |
-| HistGB (native categorical, tuned) | 0.596  | 0.851         | 0.692      | 0.763  | Final leader; details below                                   |
+| HistGB (native categorical, tuned) | 0.596  | 0.851         | 0.692      | 0.763  | Final leader; details below                                    |
+
+The full sweep of metrics vs threshold for the final leader is stored in  
+`reports/threshold_metrics_oof.csv`.
 
 ### Final leader threshold (HistGB native, tuned)
 
-- **Model:** HistGradientBoostingClassifier (native categoricals, tuned)  
+- **Model:** HistGradientBoostingClassifier (native categoricals, tuned; with family features)  
 - **Strategy:** `precision ≥ 0.85 → max recall`  
 - **Chosen index on PR-curve:** 455  
 - **Chosen threshold:** `t_final = 0.596`  
-- **Point on PR curve:**  
+- **Point on PR curve (OOF):**  
   - Precision = **0.851**  
   - Recall = **0.692**  
   - F1 ≈ **0.763**
 
-These values are computed from **OOF predictions** of the final pipeline.
+This scalar `t_final` is exported to `reports/threshold.npy` and reused for  
+test evaluation and downstream inference scripts.
 
 ---
 
@@ -82,7 +97,7 @@ These values are computed from **OOF predictions** of the final pipeline.
 Raw counts of true/false positives/negatives for the thresholds above.  
 Positive class: `Survived = 1`.
 
-> **Note:** values for Logistic / RF / OHE HistGB are filled from previous analysis.  
+> **Note:** values for Logistic / RF / OHE HistGB are filled from previous analysis.
 
 ### LogisticRegression (baseline) @ Thr = 0.636
 - **TN** = 409  
@@ -121,7 +136,7 @@ Positive class: `Survived = 1`.
 - **TN** = 406  
 - **FP** = 33  
 - **FN** = 83  
-- **TP** = 190
+- **TP** = 190  
 
 ---
 
@@ -130,11 +145,16 @@ Positive class: `Survived = 1`.
 Tuning is done only for the **HistGB (native categorical)** model,  
 using the pipeline: `preprocess → HistGradientBoostingClassifier(categorical_features=cat_idx)`.
 
-- **Target metric:** Average Precision (AP / PR-AUC)  
-- **CV protocol:** 5-fold StratifiedKFold (`shuffle=True, random_state=42`)  
+- **Target metric:** Average Precision (AP / PR-AUC).  
+- **CV protocol:** 5-fold StratifiedKFold (`shuffle=True, random_state=42`).  
 - **Search strategy:**  
-  1. **RandomizedSearchCV** — global exploration of the space  
-  2. **GridSearchCV** — local refinement around the best random configuration  
+  1. **RandomizedSearchCV** — global exploration of the space.  
+  2. **GridSearchCV** — local refinement around the best random configuration.
+
+Raw tuning results:
+
+- `reports/tuning/cv_results_hgb_random.csv` — all random configurations.  
+- `reports/tuning/cv_results_hgb_grid.csv` — local grid around the best candidate.
 
 ### 1) RandomizedSearchCV (global search)
 
@@ -184,8 +204,8 @@ RandomizedSearchCV is used as a **global search** to find a promising region.
   - `max_iter = 150`  
   - other params = defaults / values from RandomizedSearch.
 
-- CV: same 5-fold StratifiedKFold  
-- Total combinations: 3 × 3 × 3 = **27**
+- CV: same 5-fold StratifiedKFold.  
+- Total combinations: 3 × 3 × 3 = **27**.
 
 **Best configuration (GridSearchCV):**
 
@@ -216,8 +236,7 @@ threshold selection and (later) test evaluation.
 ## F) Feature Engineering — Family-Related Features
 
 Compared HistGradientBoostingClassifier (native categorical) **with vs without**  
-simple family-related features:  
-`family_size = SibSp + Parch + 1`, `is_alone`, `is_child`.
+simple family-related features: `family_size = SibSp + Parch + 1`, `is_alone`, `is_child`.
 
 5-fold OOF CV (StratifiedKFold, `shuffle=True, random_state=42`):
 
@@ -236,6 +255,10 @@ simple family-related features:
 - They are simple and interpretable and help in some family-related FN cases,  
   so we **keep them** in the final pipeline,  
   but do **not** claim a strong, statistically stable gain.
+
+`reports/worst_cases_top10.csv` contains the 10 hardest OOF cases according to  
+the final leader model and is used to qualitatively inspect the effect of family features  
+on specific false negatives / false positives.
 
 ---
 
@@ -271,9 +294,9 @@ Test set is still untouched.
 
 The final evaluation of the leader model (OOF, before applying any threshold) is:
 
-- **Model:** HistGradientBoostingClassifier (native categoricals, tuned, with family features)  
-- **PR-AUC (AP)**: **0.8474**  
-- **ROC-AUC**: **0.8723**
+- **Model:** HistGradientBoostingClassifier (native categoricals, tuned, with family features).  
+- **PR-AUC (AP)**: **0.8474**.  
+- **ROC-AUC**: **0.8723**.
 
 These values correspond to the final pipeline used for threshold selection.
 
@@ -362,11 +385,11 @@ but still behind the tuned HistGB (native) model.
 
 The best overall model:
 
-- ROC-AUC (CV) ≈ **0.873**  
-- PR-AUC (CV) ≈ **0.854–0.856**  
+- ROC-AUC (CV) ≈ **0.873**.  
+- PR-AUC (CV) ≈ **0.854–0.856**.  
 - At the chosen operating point (`precision ≈ 0.851`, OOF):
-  - recall ≈ **0.692**  
-  - F1 ≈ **0.763**
+  - recall ≈ **0.692**.  
+  - F1 ≈ **0.763**.
 
 After **RandomizedSearchCV** (global search) and **local GridSearchCV** (refinement),  
 the final hyperparameters are:
@@ -379,11 +402,8 @@ the final hyperparameters are:
 This configuration offers the best trade-off between:
 
 - ranking quality (PR-AUC / ROC-AUC),  
-- operating metrics (recall/F1 at target precision),  
-- and training time.
+- operating metrics (recall/F1 at the target precision),  
+- and training time,
 
-It is selected as the **current leader** and will be used for:
-
-- final test evaluation,  
-- error analysis,  
-- and any downstream deployment scripts (`predict.py`, etc.).
+and is therefore selected as the **final leader** for test evaluation  
+and for the serialized inference artifact (`models/leader_pipeline.joblib`).
