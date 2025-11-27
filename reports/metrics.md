@@ -58,20 +58,20 @@ Metrics below are computed at these thresholds on **OOF predictions**.
 |------------------------------------|--------|---------------|------------|--------|----------------------------------------------------------------|
 | LogisticRegression (baseline)      | 0.636  | 0.850         | 0.623      | 0.719  | OOF, 5-fold; threshold from PR-curve (precision ≥ 0.85 → max R) |
 | LogisticRegression (+balanced)     | 0.743  | 0.854         | 0.619      | 0.718  | OOF, 5-fold; same rule                                         |
-| RandomForestClassifier             | 0.640  | 0.852         | 0.652      | 0.739  | OOF, 5-fold; same rule                                         |
-| HistGB (OHE pipeline)              | 0.798  | 0.848         | 0.612      | 0.711  | OOF, 5-fold; same rule                                         |
-| HistGB (native categorical, tuned) | 0.596  | 0.851         | 0.692      | 0.763  | Final leader; details below                                   |
+| RandomForestClassifier             | 0.642  | 0.852         | 0.652      | 0.739  | OOF, 5-fold; same rule                                         |
+| HistGB (OHE pipeline)              | 0.802  | 0.852         | 0.612      | 0.712  | OOF, 5-fold; same rule                                         |
+| HistGB (native categorical, tuned) | 0.679  | 0.850         | 0.666      | 0.747  | Final leader; details below                                   |
 
 ### Final leader threshold (HistGB native, tuned)
 
 - **Model:** HistGradientBoostingClassifier (native categoricals, tuned)  
 - **Strategy:** `precision ≥ 0.85 → max recall`  
 - **Chosen index on PR-curve:** 455  
-- **Chosen threshold:** `t_final = 0.596`  
+- **Chosen threshold:** `t_final = 0.679`  
 - **Point on PR curve:**  
-  - Precision = **0.851**  
-  - Recall = **0.692**  
-  - F1 ≈ **0.763**
+  - Precision = **0.854**  
+  - Recall = **0.666**  
+  - F1 ≈ **0.747**
 
 These values are computed from **OOF predictions** of the final pipeline.
 
@@ -102,13 +102,13 @@ Positive class: `Survived = 1`.
 
 ### RandomForestClassifier @ Thr = 0.640
 - **TN** = 408  
-- **FP** = 31  
+- **FP** = 29  
 - **FN** = 95  
 - **TP** = 178  
 
 ---
 
-### HistGB (OHE pipeline) @ Thr = 0.798
+### HistGB (OHE pipeline) @ Thr = 0.802
 - **TN** = 409  
 - **FP** = 30  
 - **FN** = 106  
@@ -116,12 +116,12 @@ Positive class: `Survived = 1`.
 
 ---
 
-### HistGB (native categorical, tuned, final leader) @ Thr = 0.596
+### HistGB (native categorical, tuned, final leader) @ Thr = 0.679
 
-- **TN** = 406  
-- **FP** = 33  
-- **FN** = 83  
-- **TP** = 190
+- **TN** = 407 
+- **FP** = 32  
+- **FN** = 91  
+- **TP** = 182
 
 ---
 
@@ -382,8 +382,61 @@ This configuration offers the best trade-off between:
 - operating metrics (recall/F1 at target precision),  
 - and training time.
 
-It is selected as the **current leader** and will be used for:
+---
 
-- final test evaluation,  
-- error analysis,  
-- and any downstream deployment scripts (`predict.py`, etc.).
+## K) Stored Artifacts and File Layout
+
+This section links the metrics in this report to the concrete artifacts
+saved in the repository. All paths are relative to the project root.
+
+### 1) Cross-validation and OOF artifacts
+
+- `reports/metrics_cv.csv`  
+  Summary table with mean ± std ROC-AUC / PR-AUC across CV folds
+  for all compared models (LogisticRegression, RandomForest, HistGB variants).
+
+- `reports/train_oof_leader.csv`  
+  Out-of-fold predictions of the final **leader** pipeline
+  (one row per train sample, including `y_true`, `proba_leader_oof`, etc.).
+  All OOF-based metrics in this file (`metrics.md`) are derived from this data.
+
+- `reports/threshold_metrics_oof.csv`  
+  Sweep of metrics (precision, recall, F1, etc.) across many candidate
+  thresholds on the leader’s OOF probabilities.  
+  The **final decision threshold** `t_final` is selected based on this table
+  using the rule:
+
+  > precision ≥ target (≈0.85) → maximize recall.
+
+- `reports/worst_cases_top10.csv`  
+  Top-10 hardest OOF cases for the final leader (e.g. highest loss /
+  largest |y − ŷ| around the operating threshold), used for qualitative
+  error analysis in the notebooks.
+
+### 2) Tuning results
+
+- `reports/tuning/cv_results_hgb_random.csv`  
+  Raw `cv_results_` from the global **RandomizedSearchCV** run for
+  HistGradientBoostingClassifier (native categorical).  
+  Every row is one hyperparameter configuration with its CV scores.
+
+- `reports/tuning/cv_results_hgb_grid.csv`  
+  Raw `cv_results_` from the local **GridSearchCV** refinement step
+  around the best random configuration.  
+  The final chosen hyperparameters in section **E)** correspond to the
+  best row in this file.
+
+These two CSVs contain the exact evidence behind the tuning summary
+reported in section **E) Hyperparameter Tuning — HistGradientBoosting (native categorical)**.
+
+### 3) Threshold and production artifacts
+
+- `reports/threshold.npy`  
+  Numpy file containing the final decision threshold `t_final`
+  used for the leader model.  
+  In code, it is typically loaded as:
+
+  ```python
+  import numpy as np
+  t_final = float(np.load("reports/threshold.npy"))
+
