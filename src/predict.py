@@ -47,6 +47,9 @@ def load_input_data(csv_path: Path) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
     Load raw data for prediction.
 
+    Args:
+        csv_path: Path to the CSV file containing input data.
+
     Returns:
         X: features dataframe (target column removed if present)
         meta: dataframe with columns to keep in output (e.g. PassengerId, optional Survived)
@@ -54,7 +57,7 @@ def load_input_data(csv_path: Path) -> tuple[pd.DataFrame, pd.DataFrame]:
     df = pd.read_csv(csv_path)
 
     if df.shape[0] == 0:
-        raise ValueError("Input CSV has no rows.")
+        raise ValueError(f"Input CSV file '{csv_path}' contains no data rows.")
 
     # Keep meta columns you want to see in the output (if present)
     meta_cols = []
@@ -65,11 +68,13 @@ def load_input_data(csv_path: Path) -> tuple[pd.DataFrame, pd.DataFrame]:
     meta = df[meta_cols].copy() if meta_cols else pd.DataFrame(index=df.index)
 
     # Remove target column if present (we do not use it as feature at prediction time)
+    # Also remove meta columns from features to avoid using identifiers as model features
     if TARGET_COL in df.columns:
         meta[TARGET_COL] = df[TARGET_COL]
-        X = df.drop(columns=[TARGET_COL])
+        drop_cols = [TARGET_COL] + meta_cols
+        X = df.drop(columns=drop_cols)
     else:
-        X = df
+        X = df.drop(columns=meta_cols) if meta_cols else df
 
     return X, meta
 
@@ -96,7 +101,10 @@ def main() -> None:
         proba = pipeline.predict_proba(X)[:, 1]
     else:
         # For models without predict_proba you may use decision_function
-        raise AttributeError("Model does not support predict_proba.")
+        raise AttributeError(
+            "Model does not support predict_proba. Ensure the trained model supports "
+            "probability predictions or modify the script to use decision_function."
+        )
 
     # 4. Apply decision threshold (if provided)
     # -----------------------------------------
@@ -113,16 +121,13 @@ def main() -> None:
     # -------------------------
     output_df = meta.copy()
 
-    # Ensure index alignment
-    output_df = output_df.reindex(index=X.index)
-
     output_df["prediction"] = y_pred
     output_df["proba_positive_class"] = proba
 
     # 6. Save predictions
     # -------------------
-    args.output_dir = args.output.parent
-    args.output_dir.mkdir(parents=True, exist_ok=True)
+    output_dir = args.output.parent
+    output_dir.mkdir(parents=True, exist_ok=True)
 
     output_df.to_csv(args.output, index=False)
     print(f"Saved predictions to {args.output} with shape {output_df.shape}")
